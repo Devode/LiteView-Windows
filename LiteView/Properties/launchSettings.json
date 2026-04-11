@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "LiteView (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "LiteView (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
