@@ -28,7 +28,7 @@ jobs:
     - name: Restore Dependencies
       run: dotnet restore ${{ env.Solution_Name }}
       env:
-        Solution_Name: YourSolutionName.sln
+        Solution_Name: LiteView.slnx
 
     # --- 步骤 1: 构建（使用临时证书） ---
     # 因为没有私钥，我们只能用临时证书打包。
