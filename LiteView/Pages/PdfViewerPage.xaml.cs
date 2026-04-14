@@ -75,7 +75,15 @@ namespace LiteView.Pages
             _renderTimer.Tick += (s, e) =>
             {
                 Debug.WriteLine("高清渲染");
-                UpdateVisiblePages(true);
+                _isUpdatingVisiblePages = true;
+                try
+                {
+                    UpdateVisiblePages(true);
+                }
+                finally
+                {
+                    _isUpdatingVisiblePages = false;
+                }
                 _renderTimer.Stop();
             };
         }
@@ -141,8 +149,13 @@ namespace LiteView.Pages
             
         }
 
+        private bool _isUpdatingVisiblePages = false;
+
         private void PdfListView_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
         {
+            // Prevent re-entrancy which can cause infinite loops
+            if (_isUpdatingVisiblePages) return;
+
             // Cancel any in-flight high-quality renders when user is interacting
             if (e.IsIntermediate)
             {
@@ -156,7 +169,15 @@ namespace LiteView.Pages
                 // interaction finished -> cancel previous renders and immediately render high-quality
                 CancelAndReplaceCts();
                 _renderTimer.Stop();
-                UpdateVisiblePages(true);
+                _isUpdatingVisiblePages = true;
+                try
+                {
+                    UpdateVisiblePages(true);
+                }
+                finally
+                {
+                    _isUpdatingVisiblePages = false;
+                }
             }
             //UpdateVisiblePages();
             //Debug.WriteLine(PdfListView.VerticalOffset);
@@ -176,19 +197,32 @@ namespace LiteView.Pages
 
         private async void UpdateVisiblePages(bool highQuality = false)
         {
-            var verticalOffset = PdfListView.VerticalOffset;
+            var scrollViewer = PdfListView;
+            if (scrollViewer == null || pageHeightDip <= 0) return;
 
-            int startPage = (int)(verticalOffset / PdfListView.ZoomFactor / pageHeightDip);
-            int endPage = startPage + (int)(PdfListView.ViewportHeight / PdfListView.ZoomFactor / pageHeightDip) + 2; // +2 预加载缓冲
+            var verticalOffset = scrollViewer.VerticalOffset;
+            var zoomFactor = scrollViewer.ZoomFactor;
 
+            // Avoid division by zero or invalid calculations
+            if (zoomFactor <= 0) zoomFactor = 1.0f;
+
+            int startPage = (int)(verticalOffset / zoomFactor / pageHeightDip);
+            int endPage = startPage + (int)(scrollViewer.ViewportHeight / zoomFactor / pageHeightDip) + 2; // +2 buffer
+
+            // Clamp to valid page range
+            if (startPage < 0) startPage = 0;
+            if (endPage > _document.PageCount) endPage = _document.PageCount;
+
+            // Avoid unnecessary updates when not changing and not requesting high quality
             if (startPage == _visiblePageStart && endPage == _visiblePageEnd && !highQuality) return;
 
-            Debug.WriteLine($"更新可见页: {startPage} - {endPage}");
+            Debug.WriteLine($"更新可见页：{startPage} - {endPage}");
 
             _visiblePageStart = startPage;
             _visiblePageEnd = endPage;
 
-            for (int i = PdfCanvas.Children.Count -1; i >= 0; i--)
+            // Remove images that are no longer visible
+            for (int i = PdfCanvas.Children.Count - 1; i >= 0; i--)
             {
                 var canvasImg = PdfCanvas.Children[i] as Microsoft.UI.Xaml.Controls.Image;
                 
@@ -199,17 +233,17 @@ namespace LiteView.Pages
                 if (imgPage < startPage || imgPage >= endPage)
                 {
                     PdfCanvas.Children.RemoveAt(i);
-                    canvasImg.Source = null; // 释放图片资源
+                    canvasImg.Source = null; // Release image resources
                     _recycledImages.Add(canvasImg);
                 }
             }
 
+            // Add/update visible page images
             for (int page = startPage; page < endPage; page++)
             {
                 if (page >= _document.PageCount) break;
 
                 bool alreadyLoaded = false;
-
 
                 foreach (var child in PdfCanvas.Children)
                 {
@@ -218,7 +252,7 @@ namespace LiteView.Pages
                     if (childImg != null && (int)childImg.Tag == page)
                     {
                         alreadyLoaded = true;
-                if (highQuality)
+                        if (highQuality)
                             _ = LoadImageForPage(childImg, page, true);
                         
                         break;
@@ -227,8 +261,6 @@ namespace LiteView.Pages
 
                 if (alreadyLoaded) continue;
                 Debug.WriteLine("渲染");
-
-
 
                 var newImg = GetOrCreateImage();
 
@@ -240,7 +272,6 @@ namespace LiteView.Pages
                 Canvas.SetTop(newImg, page * pageHeightDip);
 
                 PdfCanvas.Children.Add(newImg);
-
 
                 _ = LoadImageForPage(newImg, page, highQuality);
             }
@@ -430,15 +461,16 @@ namespace LiteView.Pages
             {
                 var img = _recycledImages[0];
                 _recycledImages.RemoveAt(0);
-                img.Width = pageWidth;
-                img.Height = pageHeight;
+                // Use DIP values for consistent sizing
+                img.Width = pageWidthDip;
+                img.Height = pageHeightDip;
                 return img;
             }
 
             return new Microsoft.UI.Xaml.Controls.Image
             {
-                Width = pageWidth,
-                Height = pageHeight
+                Width = pageWidthDip,
+                Height = pageHeightDip
             };
         }
 
