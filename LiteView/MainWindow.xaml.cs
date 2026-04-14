@@ -35,6 +35,9 @@ namespace LiteView
             ExtendsContentIntoTitleBar = true;
             SetTitleBar(titleBar);
             AppWindow.TitleBar.PreferredHeightOption = Microsoft.UI.Windowing.TitleBarHeightOption.Tall;
+
+            navView.TabIndex = 0;
+            navFrame.Navigate(typeof(PdfListPage));
         }
 
         private void titleBar_BackRequested(TitleBar sender, object args)
@@ -64,6 +67,9 @@ namespace LiteView
                 {
                     case "PdfList":
                         navFrame.Navigate(typeof(PdfListPage));
+                        break;
+                    case "PdfViewer":
+                        navFrame.Navigate(typeof(PdfViewerPage));
                         break;
                 }
             }

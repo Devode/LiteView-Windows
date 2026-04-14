@@ -5,28 +5,79 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:LiteView.Pages"
     xmlns:localModels="using:LiteView.Models"
+    xmlns:control="using:CommunityToolkit.WinUI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
     <Grid Padding="20">
-        <ListView ItemsSource="{x:Bind PdfList, Mode=OneWay}"
-                  SelectionMode="Single"
-                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                  Background="Transparent">
-            
-            <!-- 移除默认的ItemContainer样式间距 -->
-            <ListView.ItemContainerStyle>
-                <Style TargetType="ListViewItem">
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
-                    <Setter Property="Margin" Value="0,4,0,4" /> <!-- 卡片之间的间距 -->
-                </Style>
-            </ListView.ItemContainerStyle>
+        <ScrollView>
+            <ListView ItemsSource="{x:Bind PdfList, Mode=OneWay}"
+                      IsItemClickEnabled="False"
+                      SelectionMode="None"
+                      ItemClick="ListView_ItemClick">
 
-            <ListView.ItemTemplate>
-                <DataTemplate x:DataType="localModels:PdfItem">
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Margin" Value="0,4,0,4" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="localModels:PdfItem">
+                        <!-- <Grid Height="72" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                              CornerRadius="8" Padding="12" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                              BorderThickness="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <FontIcon Glyph="&#xEA90;" FontSize="24" Foreground="Red" Grid.Column="0" />
+
+                            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center"> -->
+                                <!-- 文件名 -->
+                                <!-- <TextBlock Text="{x:Bind FileName}"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}" /> -->
+
+                                <!-- 修改时间 + 文件路径 -->
+                                <!-- <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Margin="0,4,0,0">
+                                    <Run Text="修改时间：" />
+                                    <Run Text="{x:Bind ModifyTime}" />
+                                    <Run Text="   文件路径：" />
+                                    <Run Text="{x:Bind FilePath}" />
+                                </TextBlock>
+                            </StackPanel>
+
+                            <FontIcon Glyph="&#xE76C;"
+                                    FontSize="16"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                    VerticalAlignment="Center"
+                                    Grid.Column="2" />
+                        </Grid> -->
+                        <control:SettingsCard Header="{x:Bind FileName}" IsClickEnabled="True" CornerRadius="8" Click="PdfCard_Click">
+                            <control:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xEA90;" FontSize="24" Foreground="Red" />
+                            </control:SettingsCard.HeaderIcon>
+                            <control:SettingsCard.Description>
+                                <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Margin="0,4,0,0">
+                                    <Run Text="修改时间：" />
+                                    <Run Text="{x:Bind ModifyTime}" />
+                                    <Run Text="   文件路径：" />
+                                    <Run Text="{x:Bind FilePath}" />
+                                </TextBlock>
+                            </control:SettingsCard.Description>
+                        </control:SettingsCard>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </ScrollView>
     </Grid>
 </Page>

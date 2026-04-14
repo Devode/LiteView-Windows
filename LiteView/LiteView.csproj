@@ -65,8 +65,17 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3856.49" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1721" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageReference Include="PdfiumViewer" Version="2.13.0" />
+    <PackageReference Include="PdfiumViewer.Native.x86_64.v8-xfa" Version="2018.4.8.256" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Pages\PdfViewerPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Pages\PdfListPage.xaml">
