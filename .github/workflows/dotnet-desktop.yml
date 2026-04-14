@@ -25,6 +25,11 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
+    - name: Restore Dependencies
+      run: dotnet restore ${{ env.Solution_Name }}
+      env:
+        Solution_Name: YourSolutionName.sln
+
     # --- 步骤 1: 构建（使用临时证书） ---
     # 因为没有私钥，我们只能用临时证书打包。
     # 这会导致安装时出现 "Unknown Publisher" 警告。
