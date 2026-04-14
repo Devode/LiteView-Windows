@@ -109,8 +109,22 @@ namespace LiteView.Pages
 
             await LoadPdfAsync(filePath);
 
+            if (_document.PageCount > 0)
+            {
+                var pageSize = _document.PageSizes[0];
+                pageHeight = pageSize.Height; // points
+                pageWidth = pageSize.Width;
+
+                // convert to DIP for XAML layout
+                const double pointToDip = 96.0 / 72.0;
+                pageWidthDip = pageWidth * pointToDip;
+                pageHeightDip = pageHeight * pointToDip;
+
+                PdfCanvas.Width = pageWidthDip;
+                PdfCanvas.Height = pageHeightDip * _document.PageCount;
+            }
+
             // prepare low-quality thumbnails at a reasonable DPI for display
-            const double pointToDip = 96.0 / 72.0; // convert PDF points to DIP
             int lowDpi = (int)(96 * lodZoom * pointToDip);
 
             for (int i = 0; i < _document.PageCount; i++)
@@ -131,22 +145,6 @@ namespace LiteView.Pages
             }
 
             UpdateVisiblePages();
-
-            if (_document.PageCount > 0)
-            {
-                var pageSize = _document.PageSizes[0];
-                pageHeight = pageSize.Height; // points
-                pageWidth = pageSize.Width;
-
-                // convert to DIP for XAML layout
-                pageWidthDip = pageWidth * pointToDip;
-                pageHeightDip = pageHeight * pointToDip;
-
-                PdfCanvas.Width = pageWidthDip;
-                PdfCanvas.Height = pageHeightDip * _document.PageCount;
-            }
-
-            
         }
 
         private bool _isUpdatingVisiblePages = false;
@@ -179,9 +177,6 @@ namespace LiteView.Pages
                     _isUpdatingVisiblePages = false;
                 }
             }
-            //UpdateVisiblePages();
-            //Debug.WriteLine(PdfListView.VerticalOffset);
-            //Debug.WriteLine(PdfListView.ZoomFactor);
         }
 
         private void CancelAndReplaceCts()
@@ -197,8 +192,11 @@ namespace LiteView.Pages
 
         private async void UpdateVisiblePages(bool highQuality = false)
         {
+            // Check if document is loaded
+            if (_document == null || PdfListView == null || pageHeightDip <= 0) return;
+
             var scrollViewer = PdfListView;
-            if (scrollViewer == null || pageHeightDip <= 0) return;
+            if (scrollViewer == null) return;
 
             var verticalOffset = scrollViewer.VerticalOffset;
             var zoomFactor = scrollViewer.ZoomFactor;
