@@ -14,26 +14,5 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 
-           VirtualizingStackPanel 是关键！
-           它确保只有可见的页面会被渲染和占用内存。
-        -->
-        <ScrollViewer
-            x:Name="PdfListView" 
-            Grid.Row="1"
-            HorizontalScrollBarVisibility="Auto"
-            VerticalScrollBarVisibility="Auto"
-            ViewChanged="PdfListView_ViewChanged"
-            ZoomMode="Enabled"
-            ManipulationMode="TranslateX,TranslateY,Scale">
-
-            <Canvas x:Name="PdfCanvas" RenderTransformOrigin="0.5, 0.5">
-                <Canvas.RenderTransform>
-                    <CompositeTransform x:Name="CanvasTransform" ScaleX="1" ScaleY="1" />
-                </Canvas.RenderTransform>
-                
-            </Canvas>
-            
-        </ScrollViewer>
     </Grid>
 </Page>
