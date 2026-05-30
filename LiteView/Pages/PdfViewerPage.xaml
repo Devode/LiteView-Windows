@@ -6,13 +6,10 @@
     xmlns:local="using:LiteView.Pages"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:control="using:LiteView.Controls"
     mc:Ignorable="d">
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
+    <Grid x:Name="PdfGrid">
+        <control:PdfViewerControl x:Name="PdfViewer" />
     </Grid>
 </Page>

@@ -41,5 +41,11 @@
                 </ListView.ItemContainerStyle>
             </ListView>
         </ScrollView>
+        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="64" Height="64" CornerRadius="8" Margin="16,16,16,16" Translation="0,0,16">
+            <FontIcon Glyph="&#xE710;" />
+            <Button.Shadow>
+                <ThemeShadow />
+            </Button.Shadow>
+        </Button>
     </Grid>
 </Page>

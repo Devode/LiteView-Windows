@@ -1,4 +1,5 @@
 using CommunityToolkit.WinUI;
+using LiteView.Controls;
 using LiteView.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -8,7 +9,6 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
-using PdfiumViewer;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Storage;
 using Windows.Storage.Streams;
 using WinRT.Interop;
 using static System.Net.Mime.MediaTypeNames;
@@ -54,8 +55,14 @@ namespace LiteView.Pages
 
             if (e.Parameter is PdfItem pdfItem)
             {
-
+                PdfViewer.PdfPath = pdfItem.FilePath;
             }
+        }
+
+        private async Task LoadPdf(string filePath)
+        {
+            var file = StorageFile.GetFileFromPathAsync(filePath);
+            var pdfDoc = await Windows.Data.Pdf.PdfDocument.LoadFromFileAsync((IStorageFile)file);
         }
 
     }

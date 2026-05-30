@@ -30,7 +30,7 @@ public sealed partial class PdfItemTemplates : ResourceDictionary
                 border.Background = brush as Brush;
             }
             
-            border.Translation = new System.Numerics.Vector3(0, -4, 16);
+            border.Translation = new System.Numerics.Vector3(0, -1, 16);
         }
     }
 
