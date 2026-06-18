@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="LiteView.Controls.AnnotationCanvasControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:LiteView.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
+    mc:Ignorable="d">
+
+    <Grid x:Name="CanvasContainer" SizeChanged="CanvasContainer_SizeChanged">
+        <Grid.Clip>
+            <RectangleGeometry x:Name="ContainerClipRect" Rect="0,0,800,600" />
+        </Grid.Clip>
+        <Canvas x:Name="DrawingCanvas"
+                      Background="Transparent"
+                      PointerPressed="DrawingCanvas_PointerPressed"
+                      PointerMoved="DrawingCanvas_PointerMoved"
+                      PointerReleased="DrawingCanvas_PointerReleased">
+
+        </Canvas>
+    </Grid>
+
+</UserControl>

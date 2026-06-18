@@ -47,8 +47,8 @@
             IsPaneToggleButtonVisible="False"
             SelectionChanged="navView_SelectionChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="PDF List" Icon="List" Tag="PdfList" />
-                <NavigationViewItem Content="PDF Viewer" Tag="PdfViewer">
+                <NavigationViewItem Content="PDF List" Icon="List" Tag="PdfListPage" />
+                <NavigationViewItem Content="PDF Viewer" Tag="PdfViewerPage">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE736;" />
                     </NavigationViewItem.Icon>

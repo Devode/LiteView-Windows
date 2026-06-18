@@ -28,7 +28,11 @@ namespace LiteView
     /// </summary>
     public partial class App : Application
     {
+
         private Window? _window;
+
+        public static MainWindow MainWindowInstance { get; private set; }
+        public const int VERSION_CODE = 0;
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -58,6 +62,8 @@ namespace LiteView
             _window = new MainWindow();
 
             ThemeHelper.RootTheme = themeToApply;
+
+            MainWindowInstance = (MainWindow)_window;
 
             _window.Activate();
         }

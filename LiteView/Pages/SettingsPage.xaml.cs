@@ -49,7 +49,7 @@ namespace LiteView.Pages
 
         private void InitializeThemeSetting()
         {
-            //themeMode.SelectionChanged -= themeMode_SelectionChanged;
+            themeMode.SelectionChanged -= themeMode_SelectionChanged;
 
             var localSettings = ApplicationData.Current.LocalSettings;
 
@@ -65,7 +65,8 @@ namespace LiteView.Pages
                 {
                     themeMode.SelectedIndex = (int)theme;
                 }
-                else {
+                else
+                {
                     // 如果保存的值无法解析，默认选择系统主题
                     themeMode.SelectedIndex = (int)Themes.Default;
                 }

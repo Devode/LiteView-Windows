@@ -9,11 +9,28 @@
     <AppIconSource>D:\WinUI3Projects\LiteView\LiteView\LiteViewIcon.png</AppIconSource>
     <SplashScreenSource>D:\WinUI3Projects\LiteView\LiteView\LiteViewIcon.png</SplashScreenSource>
     <PackageLogoSource>D:\WinUI3Projects\LiteView\LiteView\LiteViewIcon.png</PackageLogoSource>
+    <ActiveDebugProfile>LiteView (Package)</ActiveDebugProfile>
+    <_LastSelectedProfileId>D:\WinUI3Projects\LiteView\LiteView\Properties\PublishProfiles\win-arm64.pubxml</_LastSelectedProfileId>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
     <None Update="App.xaml">
       <SubType>Designer</SubType>
     </None>
+    <Page Update="Controls\AnnotationCanvasControl.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Controls\PdfListItemControl.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Controls\PdfViewerControl.xaml">
+      <SubType>Designer</SubType>
+    </Page>
     <None Update="MainWindow.xaml">
       <SubType>Designer</SubType>
     </None>
@@ -27,6 +44,9 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="Pages\SettingsPage.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Styles\PdfItemTemplates.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>

@@ -6,7 +6,6 @@
     xmlns:local="using:LiteView.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:toolkit="using:CommunityToolkit.WinUI"
     mc:Ignorable="d">
 
     <Grid Background="Transparent">
@@ -18,16 +17,8 @@
 
                     </VisualState.Setters>
                     <Storyboard>
-                        <DoubleAnimation Storyboard.TargetName="DropShadow"
-                                         Storyboard.TargetProperty="BlurRadius" To="4"
-                                         Duration="0:0:0.2">
-                            <DoubleAnimation.EasingFunction>
-                                <CubicEase />
-                            </DoubleAnimation.EasingFunction>
-                        </DoubleAnimation>
-                        <DoubleAnimation Storyboard.TargetName="Card3D"
-                                         Storyboard.TargetProperty="TranslateY" To="0"
-                                         Duration="0:0:0.2">
+                        <DoubleAnimation Storyboard.TargetName="CardRoot.Translation"
+                                         Storyboard.TargetProperty="Z" To="4">
                             <DoubleAnimation.EasingFunction>
                                 <CubicEase />
                             </DoubleAnimation.EasingFunction>
@@ -40,16 +31,8 @@
                         <Setter Target="CardRoot.Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
                     </VisualState.Setters>
                     <Storyboard>
-                        <DoubleAnimation Storyboard.TargetName="DropShadow"
-                                         Storyboard.TargetProperty="BlurRadius" To="16"
-                                         Duration="0:0:0.2">
-                            <DoubleAnimation.EasingFunction>
-                                <CubicEase />
-                            </DoubleAnimation.EasingFunction>
-                        </DoubleAnimation>
-                        <DoubleAnimation Storyboard.TargetName="Card3D"
-                                         Storyboard.TargetProperty="TranslateY" To="-1"
-                                         Duration="0:0:0.2">
+                        <DoubleAnimation Storyboard.TargetName="CardRoot.Translation"
+                                         Storyboard.TargetProperty="Z" To="4">
                             <DoubleAnimation.EasingFunction>
                                 <CubicEase />
                             </DoubleAnimation.EasingFunction>
@@ -59,9 +42,6 @@
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
         
-
-        <Border x:Name="ShadowTarget" />
-
         <Border
             x:Name="CardRoot"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -75,24 +55,13 @@
             PointerEntered="CardRoot_PointerEntered"
             PointerExited="CardRoot_PointerExited">
 
-            <toolkit:Effects.Shadow>
-                <toolkit:AttachedDropShadow x:Name="DropShadow"
-                                            CastTo="{x:Bind ShadowTarget}"
-                                            CornerRadius="8"
-                                            BlurRadius="4"
-                                            Color="{ThemeResource CardStrokeColorDefault}"
-                                            Offset="0,4" />
-            </toolkit:Effects.Shadow>
+            <Border.TranslationTransition>
+                <Vector3Transition />
+            </Border.TranslationTransition>
 
-            <Border.Transform3D>
-                <CompositeTransform3D x:Name="Card3D" TranslateZ="4" TranslateY="0" />
-            </Border.Transform3D>
-
-            <Border.ContextFlyout>
-                <MenuFlyout>
-                    <MenuFlyoutItem Text="删除" />
-                </MenuFlyout>
-            </Border.ContextFlyout>
+            <Border.Shadow>
+                <ThemeShadow />
+            </Border.Shadow>
 
             <Grid>
                 <Grid.ColumnDefinitions>

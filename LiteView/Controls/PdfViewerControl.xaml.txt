@@ -15,6 +15,9 @@
                   IsHorizontalRailEnabled="True" IsVerticalRailEnabled="True" IsScrollInertiaEnabled="True"
                   ViewChanged="PdfScrollViewer_ViewChanged">
         <Grid x:Name="ViewerRootGrid">
+            <control:AnnotationCanvasControl x:Name="AnnotationCanvas"
+                                             IsHitTestVisible="False" />
+            
             <ItemsRepeater x:Name="PdfPagesRepeater"
                            Canvas.ZIndex="0">
                 <ItemsRepeater.Layout>
@@ -49,9 +52,6 @@
                        IsHitTestVisible="False"
                        Stretch="Fill" />
             </Canvas>
-            
-            <control:AnnotationCanvasControl x:Name="AnnotationCanvas"
-                                             IsHitTestVisible="False" />
         </Grid>
 
         

@@ -12,15 +12,25 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Microsoft.Windows.Storage.Pickers;
+using Windows.Storage;
+using System.Text.Json;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace LiteView.Pages
 {
+    public class PdfDataRoot
+    {
+        public ObservableCollection<PdfItem> PdfItems { get; set; }
+    }
+
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
     /// </summary>
@@ -28,13 +38,37 @@ namespace LiteView.Pages
     {
         public ObservableCollection<PdfItem> PdfList { get; set; } = new();
 
+        private string _localFolderPath;
+        private string _dataFilePath;
+
         public PdfListPage()
         {
             InitializeComponent();
 
             // 模拟数据
-            PdfList.Add(new PdfItem { FileName = "maths_book.pdf", ModifyTime = "2025-12-01 21:53", FilePath = "C:\\Users\\lenovo\\Documents\\maths_book.pdf" });
-            PdfList.Add(new PdfItem { FileName = "演示 PDF.pdf", ModifyTime = "2026-01-23 20:07", FilePath = "C:\\Users\\lenovo\\Documents\\演示 PDF.pdf" });
+            //PdfList.Add(new PdfItem { FileName = "maths_book.pdf", ModifyTime = "2025-12-01 21:53", FilePath = "C:\\Users\\lenovo\\Documents\\maths_book.pdf" });
+            //PdfList.Add(new PdfItem { FileName = "演示 PDF.pdf", ModifyTime = "2026-01-23 20:07", FilePath = "C:\\Users\\lenovo\\Documents\\演示 PDF.pdf" });
+
+
+            _localFolderPath = ApplicationData.Current.LocalFolder.Path;
+            //string localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            //_localFolderPath = Path.Combine(localAppDataPath, "LiteView");
+            _dataFilePath = Path.Combine(_localFolderPath, "pdf_list_data.json");
+
+            //if (!Directory.Exists(_localFolderPath))
+            //{
+            //    Directory.CreateDirectory(_localFolderPath);
+            //}
+
+            Loaded += PdfListPage_Loaded;
+
+            Debug.WriteLine(_localFolderPath);
+        }
+
+        private void PdfListPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            LoadData();
         }
 
         private void ListView_ItemClick(object sender, ItemClickEventArgs e)
@@ -57,6 +91,65 @@ namespace LiteView.Pages
             {
                 this.Frame.Navigate(typeof(PdfViewerPage), pdf);
             }
+        }
+
+        private async void AddPdfButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (App.MainWindowInstance == null) return;
+
+            var picker = new FileOpenPicker(App.MainWindowInstance.AppWindow.Id);
+
+            //var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            //WinRT.Interop.InitializeWithWindow.Initialize(picker, hWnd);
+
+            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+
+            picker.FileTypeFilter.Add(".pdf");
+              
+            var result = await picker.PickSingleFileAsync();
+
+            if (result != null)
+            {
+                string filePath = result.Path;
+
+                var fileInfo = new FileInfo(filePath);
+
+                string fileName = fileInfo.Name;
+                DateTime lastModified = fileInfo.LastWriteTime;
+
+                PdfList.Add(new PdfItem { FileName = fileName, FilePath = filePath, ModifyTime = lastModified.ToString() });
+
+                SaveData();
+            }
+        }
+
+        private async void LoadData()
+        {
+            if (!File.Exists(_dataFilePath)) return;
+
+            string data = await File.ReadAllTextAsync(_dataFilePath);
+
+            var root = JsonSerializer.Deserialize<PdfDataRoot>(data);
+
+            foreach (var item in root.PdfItems)
+            {
+                PdfList.Add(item);
+            }
+        }
+
+        private async void SaveData()
+        {
+            var data = new
+            {
+                PdfItems = PdfList
+            };
+            string json = JsonSerializer.Serialize(data);
+
+            //if (!File.Exists(_dataFilePath))
+            //{
+            //    File.Create(_dataFilePath);
+            //}
+            await File.WriteAllTextAsync(_dataFilePath, json);
         }
     }
 }

@@ -13,8 +13,8 @@
         <!-- 极简工具栏按钮样式 -->
         <Style x:Key="ToolbarButtonStyle" TargetType="ButtonBase">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Width" Value="{x:Bind AplyButtonZoom(ButtonZoom), Mode=OneWay}"/> <!-- 原 48 -->
-            <Setter Property="Height" Value="{x:Bind AplyButtonZoom(ButtonZoom), Mode=OneWay}"/> <!-- 原 48 -->
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Template">
@@ -39,7 +39,7 @@
                                     <VisualState x:Name="PointerOver">
                                         <Storyboard>
                                             <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SolidBackgroundFillColorSecondaryBrush}"/>
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="#E0E0E0"/>
                                                 <!-- 悬停变灰 -->
                                             </ObjectAnimationUsingKeyFrames>
                                         </Storyboard>
@@ -47,7 +47,7 @@
                                     <VisualState x:Name="Pressed">
                                         <Storyboard>
                                             <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SolidBackgroundFillColorBaseAltBrush}"/>
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="#CCCCCC"/>
                                                 <!-- 按下更深 -->
                                             </ObjectAnimationUsingKeyFrames>
                                             <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
@@ -80,11 +80,12 @@
 
     <Grid x:Name="PdfGrid">
         <control:PdfViewerControl x:Name="PdfViewer" />
+        
+
 
         <Button ToolTipService.ToolTip="菜单"
                 Width="Auto" Height="Auto" Padding="16,8" CornerRadius="20" Margin="20"
                 VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                Style="{StaticResource ToolbarButtonStyle}"
                 Translation="0,0,16">
             <Button.Shadow>
                 <ThemeShadow />
@@ -96,7 +97,7 @@
 
             <Button.Flyout>
                 <MenuFlyout Placement="Bottom">
-                    <MenuFlyoutItem Text="进入全屏" Tag="EnterFullScreen" Click="OptionFullScreen_Click">
+                    <MenuFlyoutItem Text="全屏">
                         <MenuFlyoutItem.Icon>
                             <FontIcon Glyph="&#xE740;"/>
                         </MenuFlyoutItem.Icon>
@@ -107,7 +108,7 @@
         </Button>
 
         <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="20" CornerRadius="20"
-                Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
+                Background="#FAFAFA" BorderBrush="#EEEEEE" BorderThickness="1"
                 Translation="0,0,16">
             <Border.Shadow>
                 <ThemeShadow />
@@ -118,8 +119,7 @@
                         Style="{StaticResource ToolbarButtonStyle}">
                     <FontIcon Glyph="&#xE76B;" FontSize="24" />
                 </Button>
-                <Button x:Name="PageBtn" Click="PageBtn_Click"
-                        Padding="8" Width="Auto" Style="{StaticResource ToolbarButtonStyle}">
+                <Button Padding="8" Width="Auto" Style="{StaticResource ToolbarButtonStyle}">
                     <TextBlock>
                         <Run Text="页码" />
                         <!-- 显示当前页面页码，由代码控制文本 -->
@@ -136,7 +136,7 @@
         </Border>
 
         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20">
-            <Border Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" CornerRadius="20" Padding="8,4" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
+            <Border Background="#FAFAFA" CornerRadius="20" Padding="8,4" BorderThickness="1" BorderBrush="#EEEEEE"
                     Translation="0,0,16">
                 <Border.Shadow>
                     <ThemeShadow />
@@ -148,22 +148,22 @@
                     <StackPanel Orientation="Horizontal" Spacing="2">
                         <ToggleButton x:Name="BtnSelect" Click="ToolButton_Click" IsChecked="True"
                                       ToolTipService.ToolTip="选择" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE8B0;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/> <!-- 原FontSize = 14 -->
+                            <FontIcon Glyph="&#xE8B0;" FontSize="14"/>
                             <!-- 鼠标指针 -->
                         </ToggleButton>
                         <ToggleButton x:Name="BtnPen" Click="ToolButton_Click"
                                       ToolTipService.ToolTip="画笔" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE70F;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE70F;" FontSize="14"/>
                             <!-- 铅笔 -->
                         </ToggleButton>
                         <ToggleButton x:Name="BtnEraser" Click="ToolButton_Click"
                                       ToolTipService.ToolTip="擦除" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xED60;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xED60;" FontSize="14"/>
                             <!-- 橡皮 -->
                         </ToggleButton>
                         <Button x:Name="BtnClear" Click="BtnClear_Click"
                                 ToolTipService.ToolTip="清空" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE74D;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE74D;" FontSize="14"/>
                             <!-- 垃圾桶 -->
                         </Button>
                     </StackPanel>
@@ -175,34 +175,18 @@
                     <StackPanel Orientation="Horizontal" Spacing="2">
                         <Button x:Name="FitToWindow" Click="FitToWindow_Click"
                                 ToolTipService.ToolTip="适应屏幕" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE740;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE740;" FontSize="14"/>
                         </Button>
                         <Button x:Name="ZoomInBtn" Click="ZoomInBtn_Click"
                                 ToolTipService.ToolTip="放大" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE8A3;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE8A3;" FontSize="14"/>
                         </Button>
                         <Button x:Name="ZoomOutBtn" Click="ZoomOutBtn_Click"
                                 ToolTipService.ToolTip="缩小" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE71F;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE71F;" FontSize="14"/>
                         </Button>
                         <Button ToolTipService.ToolTip="设置" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE713;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
-                            <Button.Flyout>
-                                <Flyout Placement="BottomEdgeAlignedRight">
-                                    <StackPanel Spacing="12" MinWidth="200">
-                                        <Slider Header="按钮缩放" Minimum="8" Maximum="64" StepFrequency="0.1" Value="{x:Bind ButtonZoom, Mode=TwoWay}" />
-                                        <Slider x:Name="StrokeThicknessSlider" Header="画笔粗细" Minimum="0.1" Maximum="24" StepFrequency="0.1" ValueChanged="StrokeThicknessSlider_ValueChanged" Value="{x:Bind StrokeThickness, Mode=TwoWay}" />
-                                        <SplitButton x:Name="PickColorBtn">
-                                            <Border x:Name="CurrentColor" Width="32" Height="32" Background="{x:Bind ToBrush(PenColor), Mode=OneWay}" CornerRadius="4,0,0,4"/>
-                                            <SplitButton.Flyout>
-                                                <Flyout Placement="Bottom">
-                                                    <ColorPicker x:Name="PenColorPicker" Color="Red" ColorChanged="PenColorPicker_ColorChanged" />
-                                                </Flyout>
-                                            </SplitButton.Flyout>
-                                        </SplitButton>
-                                    </StackPanel>
-                                </Flyout>
-                            </Button.Flyout>
+                            <FontIcon Glyph="&#xE713;" FontSize="14"/>
                         </Button>
                     </StackPanel>
 
