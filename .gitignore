@@ -1,5 +1,9 @@
 Nothing should be ignored since only a source code file (.cs) was modified and no build artifacts, dependencies, or temporary files were detected in the changes.
 /.vs
-/LiteView/AppPackages
-/LiteView/obj
-/LiteView/bin
+LiteView/AppPackages/
+LiteView/obj/
+LiteView/bin/
+LiteView/BundleArtifacts/
+*.appx
+*.appxbundle
+*.appxupload
