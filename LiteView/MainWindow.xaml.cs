@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -31,6 +32,11 @@ namespace LiteView
     {
         public static MainWindow current;
 
+        /// <summary>
+        /// 存储所有PDF文件名称的列表
+        /// </summary>
+        public List<string> PdfItemNames = new();
+
         private static readonly HttpClient httpClient = new HttpClient();
 
         public MainWindow()
@@ -38,14 +44,26 @@ namespace LiteView
             InitializeComponent();
             current = this;
 
+            // 设定自定义标题栏
             ExtendsContentIntoTitleBar = true;
             SetTitleBar(titleBar);
             AppWindow.TitleBar.PreferredHeightOption = Microsoft.UI.Windowing.TitleBarHeightOption.Tall;
 
+            // 导航到默认页面 (PDF 列表页)
             navView.SelectedItem = navView.MenuItems[0];
             navFrame.Navigate(typeof(PdfListPage));
 
+            // 订阅 PDF 列表更新事件
+            App.CurrentApp.PdfService.PdfListUpdated += PdfService_PdfListUpdated;
+
+            Closed += MainWindow_Closed;
+
             Init();
+        }
+
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            App.CurrentApp.PdfService.PdfListUpdated -= PdfService_PdfListUpdated;
         }
 
         public NavigationView GetNavView()
@@ -119,10 +137,12 @@ namespace LiteView
             else
             {
                 var selectedItem = args.SelectedItem as NavigationViewItem;
+
                 switch (selectedItem?.Tag)
                 {
                     case "PdfListPage":
                         navFrame.Navigate(typeof(PdfListPage));
+
                         break;
                     case "PdfViewerPage":
                         navFrame.Navigate(typeof(PdfViewerPage));
@@ -131,6 +151,20 @@ namespace LiteView
             }
         }
 
+        private void PdfService_PdfListUpdated(object? sender, Services.PdfListUpdatedEventArgs e)
+        {
+            PdfItemNames.Clear();
+
+            foreach (var pdfItem in e.PdfList)
+            {
+                PdfItemNames.Add(pdfItem.FileName);
+            }
+        }
+
+        /// <summary>
+        /// 从服务器请求获取数据
+        /// </summary>
+        /// <returns></returns>
         private async Task<string> FetchDataAsync()
         {
             try
@@ -154,7 +188,12 @@ namespace LiteView
             }
         }
 
-        private VersionInfo ParseVersionInfo(string versionData)
+        /// <summary>
+        /// 解析从服务器获取的版本信息 JSON 字符串
+        /// </summary>
+        /// <param name="versionData"></param>
+        /// <returns>匹配到的VersionInfo对象，未找到则返回null</returns>
+        private VersionInfo? ParseVersionInfo(string versionData)
         {
             try
             {
@@ -166,8 +205,6 @@ namespace LiteView
 
                 // 将 JSON 数组反序列化为 List
                 List<VersionInfo> versions = JsonSerializer.Deserialize<List<VersionInfo>>(versionData, options);
-
-                
 
                 // 遍历测试输出
                 foreach (var v in versions)
@@ -182,5 +219,27 @@ namespace LiteView
 
             return null;
         }
+
+        private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
+
+            Debug.WriteLine("Changed");
+            var currentText = sender.Text;
+            Debug.WriteLine(currentText);
+
+            List<string> items = new List<string>();
+
+            foreach (var pdfName in PdfItemNames)
+            {
+                Debug.WriteLine(pdfName.Contains(currentText));
+                if (pdfName.Contains(currentText))
+                    items.Add(pdfName);
+            }
+
+            sender.ItemsSource = items;
+        }
+
+        
     }
 }

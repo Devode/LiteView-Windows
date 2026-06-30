@@ -20,23 +20,24 @@ using Windows.Foundation.Collections;
 using Microsoft.Windows.Storage.Pickers;
 using Windows.Storage;
 using System.Text.Json;
+using Windows.Networking.Proximity;
+using LiteView.Services;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace LiteView.Pages
 {
-    public class PdfDataRoot
-    {
-        public ObservableCollection<PdfItem> PdfItems { get; set; }
-    }
+    //public delegate void PdfListChangedHandler(object sender, ObservableCollection<PdfItem> pdfList);
 
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
     /// </summary>
     public sealed partial class PdfListPage : Page
     {
-        public ObservableCollection<PdfItem> PdfList { get; set; } = new();
+        public ObservableCollection<PdfItem> PdfList => App.CurrentApp.PdfService.PdfList;
+
+        //public event PdfListChangedHandler PdfListChanged;
 
         private string _localFolderPath;
         private string _dataFilePath;
@@ -68,7 +69,8 @@ namespace LiteView.Pages
 
         private void PdfListPage_Loaded(object sender, RoutedEventArgs e)
         {
-            LoadData();
+            //LoadData();
+            App.CurrentApp.PdfService.LoadPdfDataAsync(_dataFilePath);
         }
 
         private void ListView_ItemClick(object sender, ItemClickEventArgs e)
@@ -117,39 +119,46 @@ namespace LiteView.Pages
                 string fileName = fileInfo.Name;
                 DateTime lastModified = fileInfo.LastWriteTime;
 
-                PdfList.Add(new PdfItem { FileName = fileName, FilePath = filePath, ModifyTime = lastModified.ToString() });
+                //PdfList.Add(new PdfItem { FileName = fileName, FilePath = filePath, ModifyTime = lastModified.ToString() });
+                App.CurrentApp.PdfService.AddPdf(new PdfItem { 
+                    FileName = fileName, 
+                    FilePath = filePath, 
+                    ModifyTime = lastModified.ToString() 
+                });
 
-                SaveData();
+                App.CurrentApp.PdfService.SavePdfDataAsync(_dataFilePath);
+
+                //SaveData();
             }
+
+            //PdfListChanged?.Invoke(this, PdfList);
         }
 
-        private async void LoadData()
-        {
-            if (!File.Exists(_dataFilePath)) return;
+        //private async void LoadData()
+        //{
+        //    if (!File.Exists(_dataFilePath)) return;
 
-            string data = await File.ReadAllTextAsync(_dataFilePath);
+        //    string data = await File.ReadAllTextAsync(_dataFilePath);
 
-            var root = JsonSerializer.Deserialize<PdfDataRoot>(data);
+        //    var root = JsonSerializer.Deserialize(data, AppJsonContext.Default.PdfDataRoot);
 
-            foreach (var item in root.PdfItems)
-            {
-                PdfList.Add(item);
-            }
-        }
+        //    if (root?.PdfItems is null) return;
+        //    foreach (var item in root.PdfItems)
+        //    {
+        //        PdfList.Add(item);
+        //    }
+        //}
 
-        private async void SaveData()
-        {
-            var data = new
-            {
-                PdfItems = PdfList
-            };
-            string json = JsonSerializer.Serialize(data);
+        //private async void SaveData()
+        //{
+        //    var root = new PdfDataRoot { PdfItems = PdfList.ToList() };
+        //    string json = JsonSerializer.Serialize(root, AppJsonContext.Default.PdfDataRoot);
 
-            //if (!File.Exists(_dataFilePath))
-            //{
-            //    File.Create(_dataFilePath);
-            //}
-            await File.WriteAllTextAsync(_dataFilePath, json);
-        }
+        //    //if (!File.Exists(_dataFilePath))
+        //    //{
+        //    //    File.Create(_dataFilePath);
+        //    //}
+        //    await File.WriteAllTextAsync(_dataFilePath, json);
+        //}
     }
 }

@@ -72,6 +72,40 @@ namespace LiteView.Native
                 Height = bitmapH
             };
         }
+
+        public static RawBitmapData RenderFullPage(string filePath, int pageIndex, int renderWidth, int renderHeight, double dpi = 300.0)
+        {
+            PdfiumBootstrap.Initialize();
+
+            float scale = (float)(dpi / 72.0);
+
+            using var doc = PdfDocumentHandle.FromIntPtr(
+                PdfiumNative.FPDF_LoadDocument(filePath, IntPtr.Zero));
+            if (doc.IsInvalid) throw new InvalidOperationException($"无法打开 PDF: {filePath}");
+
+            using var page = PdfPageHandle.FromIntPtr(
+                PdfiumNative.FPDF_LoadPage(doc.DangerousGetHandle(), pageIndex));
+            if (page.IsInvalid) throw new InvalidOperationException($"无法加载第 {pageIndex} 页");
+
+            using var bitmap = PdfBitmapHandle.FromIntPtr(
+                PdfiumNative.FPDFBitmap_CreateEx(renderWidth, renderHeight, PdfiumNative.FPDF_BITMAP_BGRA, IntPtr.Zero, renderWidth * 4));
+            if (bitmap.IsInvalid) throw new OutOfMemoryException("无法创建渲染位图");
+
+            PdfiumNative.FPDFBitmap_FillRect(bitmap.DangerousGetHandle(), 0, 0, renderWidth, renderHeight, 0xFFFFFFFF);
+            PdfiumNative.FPDF_RenderPageBitmap(
+                bitmap.DangerousGetHandle(), page.DangerousGetHandle(),
+                0, 0, renderWidth, renderHeight,
+                0, PdfiumNative.FPDF_ANNOT | PdfiumNative.FPDF_LCD_TEXT);
+            IntPtr buffer = PdfiumNative.FPDFBitmap_GetBuffer(bitmap.DangerousGetHandle());
+            byte[] pixels = new byte[renderWidth * renderHeight * 4];
+            Marshal.Copy(buffer, pixels, 0, pixels.Length);
+
+            return new RawBitmapData { 
+                Pixels = pixels, 
+                Width = renderWidth, 
+                Height = renderHeight 
+            };
+        }
     }
 
     public struct RawBitmapData

@@ -81,30 +81,35 @@
     <Grid x:Name="PdfGrid">
         <control:PdfViewerControl x:Name="PdfViewer" />
 
-        <Button ToolTipService.ToolTip="菜单"
-                Width="Auto" Height="Auto" Padding="16,8" CornerRadius="20" Margin="20"
-                VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                Style="{StaticResource ToolbarButtonStyle}"
+        <Border VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="20" CornerRadius="20"
+                Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
                 Translation="0,0,16">
-            <Button.Shadow>
+            <Border.Shadow>
                 <ThemeShadow />
-            </Button.Shadow>
+            </Border.Shadow>
             
-            <Button.Content>
-                <FontIcon Glyph="&#xE700;" />
-            </Button.Content>
+            <Button ToolTipService.ToolTip="菜单"
+                    Padding="16,8" CornerRadius="20"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                    Style="{StaticResource ToolbarButtonStyle}">
 
-            <Button.Flyout>
-                <MenuFlyout Placement="Bottom">
-                    <MenuFlyoutItem Text="进入全屏" Tag="EnterFullScreen" Click="OptionFullScreen_Click">
-                        <MenuFlyoutItem.Icon>
-                            <FontIcon Glyph="&#xE740;"/>
-                        </MenuFlyoutItem.Icon>
-                    </MenuFlyoutItem>
-                </MenuFlyout>
-            </Button.Flyout>
+                <Button.Content>
+                    <FontIcon Glyph="&#xE700;" FontSize="24" />
+                </Button.Content>
 
-        </Button>
+                <Button.Flyout>
+                    <MenuFlyout Placement="Bottom">
+                        <MenuFlyoutItem Text="进入全屏" Tag="EnterFullScreen" Click="OptionFullScreen_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE740;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+
+            </Button>
+        </Border>
+        
 
         <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="20" CornerRadius="20"
                 Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"

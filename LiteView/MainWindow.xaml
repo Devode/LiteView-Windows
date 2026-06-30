@@ -30,12 +30,13 @@
                 <ImageIconSource ImageSource="/Assets/Icons/LiteViewIcon.ico" />
             </TitleBar.IconSource>
             <TitleBar.Content>
-                <AutoSuggestBox
-                    Width="360"
-                    VerticalAlignment="Center"
-                    CornerRadius="8"
-                    PlaceholderText="Search.."
-                    QueryIcon="Find" />
+                <AutoSuggestBox x:Name="SearchBox"
+                                Width="360"
+                                VerticalAlignment="Center"
+                                CornerRadius="8"
+                                PlaceholderText="搜索"
+                                QueryIcon="Find"
+                                TextChanged="SearchBox_TextChanged"/>
             </TitleBar.Content>
         </TitleBar>
 
@@ -47,8 +48,8 @@
             IsPaneToggleButtonVisible="False"
             SelectionChanged="navView_SelectionChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="PDF List" Icon="List" Tag="PdfListPage" />
-                <NavigationViewItem Content="PDF Viewer" Tag="PdfViewerPage">
+                <NavigationViewItem Content="PDF 列表" Icon="List" Tag="PdfListPage" />
+                <NavigationViewItem Content="PDF 阅读器" Tag="PdfViewerPage">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE736;" />
                     </NavigationViewItem.Icon>

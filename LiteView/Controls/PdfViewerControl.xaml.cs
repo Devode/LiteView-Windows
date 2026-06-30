@@ -385,20 +385,22 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// <param name="dpi"></param>
     /// <param name="zoom"></param>
     /// <returns>BitmapImage 图片</returns>
-    private async Task<BitmapImage> RenderBitmap(int pageIndex, double dpi, double zoom)
+    private async Task<WriteableBitmap> RenderBitmap(int pageIndex, double dpi, double zoom)
     {
         var size = _pdfDocument.PageSizes[pageIndex];
         int renderWidth = (int)(size.Width * zoom);
         int renderHeight = (int)(size.Height * zoom);
 
-        var image = _pdfDocument.Render(
-            pageIndex,                      // 页面索引
-            renderWidth, renderHeight,      // 渲染宽度与高度
-            (float)dpi, (float)dpi,         // 渲染 DPI
-            false
-        );
+        //var image = _pdfDocument.Render(
+        //    pageIndex,                      // 页面索引
+        //    renderWidth, renderHeight,      // 渲染宽度与高度
+        //    (float)dpi, (float)dpi,         // 渲染 DPI
+        //    false
+        //);
+        var rawBitmapData = Native.PdfRenderer.RenderFullPage(PdfPath, pageIndex, renderWidth, renderHeight, dpi);
 
-        var bitmap = await ImageHelper.ConvertToBitmapImage(image);
+        //var bitmap = await ImageHelper.ConvertToBitmapImage(image);
+        var bitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
 
         return bitmap;
     }
@@ -480,12 +482,13 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         }
 
         // 组装 Bitmap
-        var particalBitmap = new WriteableBitmap(rawBitmapData.Width, rawBitmapData.Height);
-        using (var stream = particalBitmap.PixelBuffer.AsStream())
-        {
-            await stream.WriteAsync(rawBitmapData.Pixels, 0, rawBitmapData.Pixels.Length);
-        }
-        particalBitmap.Invalidate();
+        var particalBitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
+        //var particalBitmap = new WriteableBitmap(rawBitmapData.Width, rawBitmapData.Height);
+        //using (var stream = particalBitmap.PixelBuffer.AsStream())
+        //{
+        //    await stream.WriteAsync(rawBitmapData.Pixels, 0, rawBitmapData.Pixels.Length);
+        //}
+        //particalBitmap.Invalidate();
 
         //var image = new Microsoft.UI.Xaml.Controls.Image
         //{

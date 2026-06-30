@@ -12,10 +12,10 @@ namespace LiteView.Models
 {
     public class PdfPageViewModel : INotifyPropertyChanged
     {
-        private BitmapImage _pageImage;
+        private WriteableBitmap _pageImage;
         private bool _isLoading;
 
-        public BitmapImage PageImage
+        public WriteableBitmap PageImage
         {
             get => _pageImage;
             set { _pageImage = value; OnPropertyChanged(); }

@@ -1,4 +1,5 @@
 ﻿using LiteView.Helpers;
+using LiteView.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -33,6 +34,10 @@ namespace LiteView
 
         public static MainWindow MainWindowInstance { get; private set; }
         public const int VERSION_CODE = 0;
+
+        public PdfDataService PdfService { get; } = new PdfDataService();
+
+        public static App CurrentApp => (App)Current;
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code

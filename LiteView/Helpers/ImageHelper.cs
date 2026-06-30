@@ -1,10 +1,12 @@
 ﻿using CommunityToolkit.WinUI;
+using LiteView.Native;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage.Streams;
@@ -63,11 +65,29 @@ namespace LiteView.Helpers
             }
         }
 
+        /// <summary>
+        /// 组装 Bitamp
+        /// </summary>
+        /// <param name="rawBitmapData"></param>
+        /// <returns></returns>
+        public static async Task<WriteableBitmap> AssembleBitmapAsync(RawBitmapData rawBitmapData)
+        {
+            var bitmap = new WriteableBitmap(rawBitmapData.Width, rawBitmapData.Height);
+            using (var stream = bitmap.PixelBuffer.AsStream())
+            {
+                await stream.WriteAsync(rawBitmapData.Pixels, 0, rawBitmapData.Pixels.Length);
+            }
+            bitmap.Invalidate();
+
+            return bitmap;
+        }
+
         private static async Task<BitmapImage> CreateBitmapAsync(IRandomAccessStream stream) {
             var bitmapImage = new BitmapImage();
             bitmapImage.DecodePixelType = DecodePixelType.Logical;
             await bitmapImage.SetSourceAsync(stream);
             return bitmapImage;
         }
+
     }
 }
