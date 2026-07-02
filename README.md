@@ -14,8 +14,9 @@
 - **亚克力背景** — 使用 Mica 材质实现现代界面效果。
 
 ## 截图
+![PDF 列表](./docs/images/pdf-list-screenshot.png)
+![PDF 阅读器](./docs/images/pdf-viewer-screenshot.png)
 
-> *（待补充）*
 
 ## 环境要求
 
