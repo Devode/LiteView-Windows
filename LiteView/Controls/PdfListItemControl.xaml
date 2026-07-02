@@ -90,7 +90,7 @@
 
             <Border.ContextFlyout>
                 <MenuFlyout>
-                    <MenuFlyoutItem Text="删除" />
+                    <MenuFlyoutItem Text="移除" Click="RemoveItem_Click" />
                 </MenuFlyout>
             </Border.ContextFlyout>
 
@@ -122,9 +122,10 @@
                     RelativePanel.Below="titleText"
                     Style="{StaticResource CaptionTextBlockStyle}"
                     TextTrimming="WordEllipsis">
-                    <Run Text="修改时间：" />
+                    <Run x:Uid="ModifiedDate" />
                     <Run Text="{x:Bind Model.ModifyTime, Mode=OneWay}" />
-                    <Run Text="    文件路径：" />
+                    <Run Text="    " />
+                    <Run x:Uid="FilePath" />
                     <Run Text="{x:Bind Model.FilePath, Mode=OneWay}" />
                     <ToolTipService.ToolTip>
                         <ToolTip Visibility="{Binding ElementName=subtitleText, Path=IsTextTrimmed}">

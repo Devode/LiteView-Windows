@@ -79,5 +79,10 @@ namespace LiteView.Controls
                 VisualStateManager.GoToState(this, "Normal", true);
             }
         }
+
+        private void RemoveItem_Click(object sender, RoutedEventArgs e)
+        {
+            App.CurrentApp.PdfService.RemovePdf(Model);
+        }
     }
 }

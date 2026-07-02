@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
@@ -36,6 +37,8 @@ namespace LiteView
         public const int VERSION_CODE = 0;
 
         public PdfDataService PdfService { get; } = new PdfDataService();
+        public string LocalFolderPath;
+        public string PdfDataFilePath;
 
         public static App CurrentApp => (App)Current;
 
@@ -45,6 +48,7 @@ namespace LiteView
         /// </summary>
         public App()
         {
+            //Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = "en-US";
             InitializeComponent();
         }
 
@@ -54,6 +58,13 @@ namespace LiteView
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
+            Init();            
+        }
+
+        private async void Init()
+        {
+            LoadData();
+
             var localSettings = ApplicationData.Current.LocalSettings;
             ElementTheme themeToApply = ElementTheme.Default; // 默认值，初始化将要应用的主题
 
@@ -71,6 +82,14 @@ namespace LiteView
             MainWindowInstance = (MainWindow)_window;
 
             _window.Activate();
+        }
+
+        private async void LoadData()
+        {
+            LocalFolderPath = ApplicationData.Current.LocalFolder.Path;
+            PdfDataFilePath = System.IO.Path.Combine(LocalFolderPath, "pdf_list_data.json");
+
+            await PdfService.LoadPdfDataAsync(PdfDataFilePath);
         }
     }
 }

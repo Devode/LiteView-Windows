@@ -58,6 +58,8 @@ namespace LiteView
 
             Closed += MainWindow_Closed;
 
+            
+
             Init();
         }
 
@@ -159,6 +161,8 @@ namespace LiteView
             {
                 PdfItemNames.Add(pdfItem.FileName);
             }
+
+            App.CurrentApp.PdfService.SavePdfDataAsync(App.CurrentApp.PdfDataFilePath);
         }
 
         /// <summary>

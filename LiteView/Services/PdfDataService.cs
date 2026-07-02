@@ -60,6 +60,13 @@ namespace LiteView.Services
             NotifyListChanged();
         }
 
+        public void RemovePdf(PdfItem pdfItem)
+        {
+            PdfList.Remove(pdfItem);
+
+            NotifyListChanged();
+        }
+
         /// <summary>
         /// 异步加载 PDF 数据
         /// </summary>
@@ -91,6 +98,8 @@ namespace LiteView.Services
         /// <returns></returns>
         public async Task SavePdfDataAsync(string dataFilePath)
         {
+            if (PdfList == null) return;
+
             var root = new PdfDataRoot { PdfItems = PdfList.ToList() };
             string json = JsonSerializer.Serialize(root, AppJsonContext.Default.PdfDataRoot);
 

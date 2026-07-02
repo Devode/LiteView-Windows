@@ -9,14 +9,14 @@
   IgnorableNamespaces="uap rescap systemai">
 
   <Identity
-    Name="1e40b012-74ae-48f2-8670-c17b4f07730b"
+    Name="1e40b012-74ae-48f2-8670-c17b4f07730b.Dev"
     Publisher="CN=lenovo"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="1e40b012-74ae-48f2-8670-c17b4f07730b" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>LiteView</DisplayName>
+    <DisplayName>LiteView Dev</DisplayName>
     <PublisherDisplayName>Devode</PublisherDisplayName>
     <Logo>Assets\Icons\StoreLogo.png</Logo>
   </Properties>
@@ -35,8 +35,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="LiteView"
-        Description="LiteView"
+        DisplayName="LiteView Dev"
+        Description="LiteView Debug 模式"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Icons\Square150x150Logo.png"
         Square44x44Logo="Assets\Icons\Square44x44Logo.png">

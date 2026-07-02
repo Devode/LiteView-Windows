@@ -118,6 +118,18 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     public PdfViewerControl()
     {
         InitializeComponent();
+
+        Unloaded += PdfViewerControl_Unloaded;
+    }
+
+    private void PdfViewerControl_Unloaded(object sender, RoutedEventArgs e)
+    {
+        _pdfDocument?.Dispose();
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+
+        PdfPages.Clear();
     }
 
     private async void InitializePdf(string pdfPath)

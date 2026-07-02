@@ -1,60 +1,55 @@
-name: Build WinUI 3 with Attestation
+name: Build LiteView MSIX
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-    
 
 jobs:
   build:
+    strategy:
+      matrix:
+        platform: [x86, x64]
     runs-on: windows-2022
     permissions:
-      id-token: write # 必需：用于 OIDC 令牌
-      contents: read  # 必需：用于 checkout
+      id-token: write
+      contents: read
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Setup .NET
+    - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '8.0.x'
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.slnx') }}
 
     - name: Restore Dependencies
-      run: dotnet restore ${{ env.Solution_Name }}
-      env:
-        Solution_Name: LiteView.slnx
+      run: dotnet restore LiteView.slnx
 
-    # --- 步骤 1: 构建（使用临时证书） ---
-    # 因为没有私钥，我们只能用临时证书打包。
-    # 这会导致安装时出现 "Unknown Publisher" 警告。
-    - name: Build MSIX (Unsigned/Temp)
+    - name: Build MSIX (${{ matrix.platform }})
       run: |
-        msbuild ${{ env.Solution_Name }} `
-          /p:Configuration=Release `
-          /p:Platform=x64 `
-          /p:AppxBundle=Never `
-          /p:AppxPackageDir="${{ github.workspace }}\AppPackages\" `
-          /p:GenerateAppxPackageOnBuild=true `
-          /p:UapAppxPackageBuildMode=SideloadOnly
-      env:
-        Solution_Name: LiteView.slnx # ⚠️ 替换为你的 .sln 文件名
+        dotnet build LiteView.slnx `
+          -c Release `
+          -p:Platform=${{ matrix.platform }} `
+          -p:AppxBundle=Never `
+          -p:AppxPackageDir="${{ github.workspace }}\AppPackages\" `
+          -p:GenerateAppxPackageOnBuild=true `
+          -p:UapAppxPackageBuildMode=SideloadOnly
 
-    # --- 步骤 2: 生成 GitHub 证明 ---
-    # 这不会修改 MSIX 文件本身，而是生成一个证明文件
     - name: Generate Attestation
       uses: actions/attest-build-provenance@v1
       with:
         subject-path: '${{ github.workspace }}\AppPackages\*.msix'
 
-    # --- 步骤 3: 上传 ---
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MSIX-With-Attestation
+        name: LiteView-${{ matrix.platform }}-Release
         path: ${{ github.workspace }}\AppPackages\

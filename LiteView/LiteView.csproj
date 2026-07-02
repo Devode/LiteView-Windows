@@ -7,7 +7,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+	<Release>true</Release>
+	<Release Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Debug-Unpackaged'">false</Release>
+	<Packaged>true</Packaged>
+	<Packaged Condition="'$(Configuration)' == 'Debug-Unpackaged' Or '$(Configuration)' == 'Release-Unpackaged'">false</Packaged>
+	  
     <PublishProfile>win-$(Platform).pubxml</PublishProfile>
+	  
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
     <EnableMsixTooling>true</EnableMsixTooling>
@@ -55,6 +61,15 @@
     <None Remove="Controls\PdfViewerControl.xaml" />
     <None Remove="Pages\PdfListPage.xaml" />
     <None Remove="Pages\SettingsPage.xaml" />
+  </ItemGroup>
+	
+  <ItemGroup Condition="'$(Packaged)' == 'true'">
+	<AppxManifest Include="Package.appxmanifest" Condition="'$(Release)' == 'true'">
+      <SubType>Designer</SubType>
+	</AppxManifest>
+	<AppxManifest Include="Package.Dev.appxmanifest" Condition="'$(Release)' == 'false'">
+      <SubType>Designer</SubType>
+    </AppxManifest>
   </ItemGroup>
 
   <ItemGroup>

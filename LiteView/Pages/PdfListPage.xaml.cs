@@ -15,13 +15,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Microsoft.Windows.Storage.Pickers;
-using Windows.Storage;
-using System.Text.Json;
-using Windows.Networking.Proximity;
-using LiteView.Services;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -39,8 +33,8 @@ namespace LiteView.Pages
 
         //public event PdfListChangedHandler PdfListChanged;
 
-        private string _localFolderPath;
-        private string _dataFilePath;
+        //private string _localFolderPath;
+        //private string _dataFilePath;
 
         public PdfListPage()
         {
@@ -51,11 +45,11 @@ namespace LiteView.Pages
             //PdfList.Add(new PdfItem { FileName = "演示 PDF.pdf", ModifyTime = "2026-01-23 20:07", FilePath = "C:\\Users\\lenovo\\Documents\\演示 PDF.pdf" });
 
 
-            _localFolderPath = ApplicationData.Current.LocalFolder.Path;
+            //_localFolderPath = ApplicationData.Current.LocalFolder.Path;
             //string localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
             //_localFolderPath = Path.Combine(localAppDataPath, "LiteView");
-            _dataFilePath = Path.Combine(_localFolderPath, "pdf_list_data.json");
+            //_dataFilePath = Path.Combine(_localFolderPath, "pdf_list_data.json");
 
             //if (!Directory.Exists(_localFolderPath))
             //{
@@ -63,14 +57,22 @@ namespace LiteView.Pages
             //}
 
             Loaded += PdfListPage_Loaded;
+            PdfList.CollectionChanged += OnPdfListChanged;
 
-            Debug.WriteLine(_localFolderPath);
+            EmptyText.Visibility = PdfList.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            Debug.WriteLine(App.CurrentApp.PdfDataFilePath);
+        }
+
+        private void OnPdfListChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            EmptyText.Visibility = PdfList.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void PdfListPage_Loaded(object sender, RoutedEventArgs e)
         {
             //LoadData();
-            App.CurrentApp.PdfService.LoadPdfDataAsync(_dataFilePath);
+            //App.CurrentApp.PdfService.LoadPdfDataAsync(App.CurrentApp.PdfDataFilePath);
         }
 
         private void ListView_ItemClick(object sender, ItemClickEventArgs e)
@@ -114,6 +116,28 @@ namespace LiteView.Pages
             {
                 string filePath = result.Path;
 
+                // 检查是否重复
+                foreach (var pdfItem in App.CurrentApp.PdfService.PdfList)
+                {
+                    if (pdfItem == null) continue;
+
+                    // 若添加过相同的文件，则弹窗提醒，并直接返回
+                    if (filePath == pdfItem.FilePath) {
+                        ContentDialog dialog = new ContentDialog
+                        {
+                            Title = "添加失败",
+                            Content = "已在列表中添加过相同的文件",
+                            PrimaryButtonText = "知道了",
+                            DefaultButton = ContentDialogButton.Primary,
+                            XamlRoot = Content.XamlRoot
+                        };
+
+                        dialog.ShowAsync();
+
+                        return; 
+                    }
+                }
+
                 var fileInfo = new FileInfo(filePath);
 
                 string fileName = fileInfo.Name;
@@ -126,7 +150,7 @@ namespace LiteView.Pages
                     ModifyTime = lastModified.ToString() 
                 });
 
-                App.CurrentApp.PdfService.SavePdfDataAsync(_dataFilePath);
+                //App.CurrentApp.PdfService.SavePdfDataAsync(_dataFilePath);
 
                 //SaveData();
             }

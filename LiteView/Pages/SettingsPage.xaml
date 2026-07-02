@@ -29,13 +29,12 @@
         </Grid.RowDefinitions>
         
         <!-- 标题 -->
-        <TextBlock
+        <TextBlock x:Uid="Settings"
             x:Name="PageHeader"
             MaxWidth="1064"
             Margin="36,24,36,0"
             AutomationProperties.HeadingLevel="Level1"
-            Style="{StaticResource TitleTextBlockStyle}"
-            Text="设置" />
+            Style="{StaticResource TitleTextBlockStyle}" />
         
         <!-- 内容 -->
         <ScrollView
@@ -49,15 +48,15 @@
                         <RepositionThemeTransition />
                     </TransitionCollection>
                 </StackPanel.ChildrenTransitions>
-                <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="外观" />
-                <controls:SettingsCard Header="主题" Description="选择应用的主题">
+                <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" x:Uid="Appearance"/>
+                <controls:SettingsCard x:Uid="Theme">
                     <ComboBox x:Name="themeMode" 
                               SelectedIndex="0" 
                               MinWidth="200"
                               SelectionChangedTrigger="Committed">
-                        <ComboBoxItem Content="跟随系统" Tag="Default" />
-                        <ComboBoxItem Content="浅色" Tag="Light" />
-                        <ComboBoxItem Content="深色" Tag="Dark" />
+                        <ComboBoxItem x:Uid="ThemeUsingSystemSetting" Tag="Default" />
+                        <ComboBoxItem x:Uid="ThemeLight" Tag="Light" />
+                        <ComboBoxItem x:Uid="ThemeDark" Tag="Dark" />
                     </ComboBox>
                 </controls:SettingsCard>
             </StackPanel>
