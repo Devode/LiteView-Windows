@@ -1,3 +1,4 @@
+using LiteView.Helpers;
 using LiteView.Models;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.UI.Xaml;
@@ -297,7 +298,7 @@ namespace LiteView.Controls
             var currentPath = FindName("Current") as Microsoft.UI.Xaml.Shapes.Path;
 
             if (currentPath != null)
-                currentPath.Data = CreatePathDataFromStroke(_currentDrawingStroke);
+                currentPath.Data = CreateCurrentPathDataFromStroke(_currentDrawingStroke);
 
             //DrawingCanvas.Invalidate();
         }
@@ -355,18 +356,9 @@ namespace LiteView.Controls
         {
             if (stroke.Points.Count < 2) return null;
 
-            var figure = new PathFigure { StartPoint = stroke.Points[0].ToPoint() };
-            var seg = new PolyQuadraticBezierSegment();
-            for (int i = 1; i < stroke.Points.Count - 1; i++)
-            {
-                var mid = new Point(
-                    (stroke.Points[i].X + stroke.Points[i + 1].X) / 2,
-                    (stroke.Points[i].Y + stroke.Points[i + 1].Y) / 2);
-                seg.Points.Add(stroke.Points[i].ToPoint());  // 控制点
-                seg.Points.Add(mid);                          // 终点
-            }
-            figure.Segments.Add(seg);
-            figure.Segments.Add(new LineSegment { Point = stroke.Points[^1].ToPoint() });
+            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 1.0f);
+
+            var figure = GenerateBezierPathFigure(simplifiedPoints);
 
             int count = _strokes.Count;
             //while (FindName(count.ToString()) != null)
@@ -377,7 +369,7 @@ namespace LiteView.Controls
             return new Microsoft.UI.Xaml.Shapes.Path
             {
                 Name = count.ToString(),
-                Data = new PathGeometry { Figures = { figure } },
+                Data = figure,
                 Stroke = new SolidColorBrush(stroke.PenColor),
                 StrokeThickness = stroke.Thickness,
                 StrokeLineJoin = PenLineJoin.Round,
@@ -385,48 +377,58 @@ namespace LiteView.Controls
                 StrokeEndLineCap = PenLineCap.Round,
             };
         }
-        private Geometry? CreatePathDataFromStroke(Stroke stroke)
+
+        /// <summary>
+        /// 为当前绘制的笔画创建路径数据
+        /// </summary>
+        /// <param name="stroke"></param>
+        /// <returns></returns>
+        private PathGeometry? CreateCurrentPathDataFromStroke(Stroke stroke)
         {
             if (stroke.Points.Count < 2) return null;
 
-            var figure = new PathFigure { StartPoint = stroke.Points[0].ToPoint() };
-            var seg = new PolyQuadraticBezierSegment();
-            for (int i = 1; i < stroke.Points.Count - 1; i++)
-            {
-                var mid = new Point(
-                    (stroke.Points[i].X + stroke.Points[i + 1].X) / 2,
-                    (stroke.Points[i].Y + stroke.Points[i + 1].Y) / 2);
-                seg.Points.Add(stroke.Points[i].ToPoint());  // 控制点
-                seg.Points.Add(mid);                          // 终点
-            }
-            figure.Segments.Add(seg);
-            figure.Segments.Add(new LineSegment { Point = stroke.Points[^1].ToPoint() });
+            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 1.0f);
 
-            return new PathGeometry { Figures = { figure } };
+            //var figure = GenerateBezierPathFigure(simplifiedPoints);
+
+            return GenerateBezierPathFigure(simplifiedPoints);
         }
 
-        private CanvasGeometry CreateSmoothGeometry(CanvasControl sender, List<Vector2> points, float thickness)
+        /// <summary>
+        /// 生成平滑的贝塞尔曲线路径
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        private PathGeometry? GenerateBezierPathFigure(List<Vector2> points)
         {
-            if (points.Count == 0) return null;
+            if (points.Count < 2) return null;
 
-            if (points.Count == 1)
-            {
-                return CanvasGeometry.CreateCircle(sender.Device, points[0], thickness / 2.0f);
-            }
+            List<int> corners = StrokeHelper.DetectCorners(points, 90.0f);
 
-            using var builder = new CanvasPathBuilder(sender.Device);
-            builder.BeginFigure(points[0]);
-
+            var figure = new PathFigure { StartPoint = points[0].ToPoint() };
+            var seg = new PolyQuadraticBezierSegment();
             for (int i = 1; i < points.Count - 1; i++)
             {
-                var midPoint = Vector2.Lerp(points[i], points[i + 1], 0.5f);
-                builder.AddQuadraticBezier(points[i], midPoint);
+                Point mid;
+
+                if (corners.Contains(i + 1))
+                {
+                    mid = points[i+1].ToPoint();
+                }
+                else
+                {
+                    mid = new Point(
+                        (points[i].X + points[i + 1].X) / 2,
+                        (points[i].Y + points[i + 1].Y) / 2);
+                }
+
+                seg.Points.Add(points[i].ToPoint());    // 控制点
+                seg.Points.Add(mid);                    // 终点
             }
+            figure.Segments.Add(seg);
+            figure.Segments.Add(new LineSegment { Point = points[^1].ToPoint() });
 
-            builder.AddLine(points[^1]);
-            builder.EndFigure(CanvasFigureLoop.Open);
-
-            return CanvasGeometry.CreatePath(builder);
+            return new PathGeometry { Figures = { figure } };
         }
     }
 }
