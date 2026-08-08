@@ -1,5 +1,7 @@
 # LiteView
 
+**语言**：[English](README_EN.md)
+
 一款轻量级的原生 **WinUI 3** PDF 阅读器，适用于 Windows 10/11，基于 .NET 8 和 PDFium 构建。
 
 ## 功能特性
@@ -12,6 +14,8 @@
 - **多语言支持** — 简体中文和英语（未完全支持英语）。
 - **更新检测** — 启动时自动通过 Supabase REST API 检查新版本。
 - **亚克力背景** — 使用 Mica 材质实现现代界面效果。
+
+ （注：当前版本中批注仅保存在内存中，关闭页面后不会持久化）
 
 ## 截图
 ![PDF 列表](./docs/images/pdf-list-screenshot.png)
