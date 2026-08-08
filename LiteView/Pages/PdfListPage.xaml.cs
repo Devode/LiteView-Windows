@@ -81,10 +81,14 @@ namespace LiteView.Pages
             var grid = sender as Grid;
             var selectedItem = e.ClickedItem as PdfItem;
 
-            if (selectedItem != null)
+            // 检查文件路径是否存在
+            if (selectedItem == null || File.Exists(selectedItem.FilePath) == false)
             {
-                this.Frame.Navigate(typeof(PdfViewerPage), selectedItem);
+                PdfPathNotExistsDialog(selectedItem?.FilePath ?? "Unknown");
+                return;
             }
+
+            this.Frame.Navigate(typeof(PdfViewerPage), selectedItem);
         }
 
         private void PdfCard_Click(object sender, RoutedEventArgs e)
@@ -132,7 +136,7 @@ namespace LiteView.Pages
                             XamlRoot = Content.XamlRoot
                         };
 
-                        dialog.ShowAsync();
+                        await dialog.ShowAsync();
 
                         return; 
                     }
@@ -184,5 +188,22 @@ namespace LiteView.Pages
         //    //}
         //    await File.WriteAllTextAsync(_dataFilePath, json);
         //}
+
+        /// <summary>
+        /// 弹出对话框提示 PDF 文件路径不存在
+        /// </summary>
+        /// <param name="filePath"></param>
+        private async void PdfPathNotExistsDialog(string filePath)
+        {
+            ContentDialog dialog = new ContentDialog
+            {
+                Title = "文件不存在",
+                Content = $"无法找到文件：{filePath}\n请检查文件路径是否正确。",
+                CloseButtonText = "关闭"
+            };
+            dialog.XamlRoot = this.XamlRoot;
+
+            await dialog.ShowAsync();
+        }
     }
 }

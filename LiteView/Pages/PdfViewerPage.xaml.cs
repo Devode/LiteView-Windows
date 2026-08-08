@@ -132,18 +132,24 @@ namespace LiteView.Pages
 
             if (e.Parameter is PdfItem pdfItem)
             {
-                if (pdfItem != null && pdfItem.FilePath.Length != 0) PdfViewer.PdfPath = pdfItem.FilePath;
+                // 检查文件是否存在，如果不存在则不加载 PDF 并显示错误提示
+                if (pdfItem == null || File.Exists(pdfItem.FilePath) == false)
+                {
+                    return;
+                }
+
+                PdfViewer.PdfPath = pdfItem.FilePath;
 
                 //AnnotationCanvas.BindToScrollViewer(PdfViewer);
                 //if(PdfViewer.PageCount != 0) PageCounts.Text = $"1/{PdfViewer.PageCount}";
             }
         }
 
-        private async Task LoadPdf(string filePath)
-        {
-            var file = StorageFile.GetFileFromPathAsync(filePath);
-            var pdfDoc = await Windows.Data.Pdf.PdfDocument.LoadFromFileAsync((IStorageFile)file);
-        }
+        //private async Task LoadPdf(string filePath)
+        //{
+        //    var file = StorageFile.GetFileFromPathAsync(filePath);
+        //    var pdfDoc = await Windows.Data.Pdf.PdfDocument.LoadFromFileAsync((IStorageFile)file);
+        //}
 
         private void ToolButton_Click(object sender, RoutedEventArgs e)
         {
@@ -167,6 +173,10 @@ namespace LiteView.Pages
             }
         }
 
+        /// <summary>
+        /// 取消其他工具按钮的选中状态，确保只有当前按钮被选中
+        /// </summary>
+        /// <param name="currentButton"></param>
         private void UncheckOthers(ToggleButton currentButton)
         {
             var tools = new[] { BtnSelect, BtnPen, BtnEraser };
@@ -187,16 +197,20 @@ namespace LiteView.Pages
             {
                 case "BtnSelect":
                     System.Diagnostics.Debug.WriteLine("切换到：选择模式");
-                    PdfViewer.GetAnnotationCanvas().IsHitTestVisible = false;
+                    //PdfViewer.GetAnnotationCanvas().IsHitTestVisible = false;
+                    PdfViewer.AllowAnnotate(false);
+                    PdfViewer.SetScrollingEnabled(true);
                     break;
                 case "BtnPen":
                     System.Diagnostics.Debug.WriteLine("切换到：画笔模式");
-                    PdfViewer.GetAnnotationCanvas().IsHitTestVisible = true;
-                    PdfViewer.GetAnnotationCanvas().IsEraser = false;
+                    PdfViewer.AllowAnnotate(true);
+                    PdfViewer.SetAnnotationEraseMode(false);
+                    PdfViewer.SetScrollingEnabled(false);
                     break;
                 case "BtnEraser":
-                    PdfViewer.GetAnnotationCanvas().IsHitTestVisible = true;
-                    PdfViewer.GetAnnotationCanvas().IsEraser = true;
+                    PdfViewer.AllowAnnotate(true);
+                    PdfViewer.SetAnnotationEraseMode(true);
+                    PdfViewer.SetScrollingEnabled(false);
                     System.Diagnostics.Debug.WriteLine("切换到：橡皮擦模式");
                     break;
             }
@@ -229,7 +243,7 @@ namespace LiteView.Pages
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
-            PdfViewer.GetAnnotationCanvas().ClearStrokes();
+            PdfViewer.ClearAnnotations();
         }
 
         private async void PageBtn_Click(object sender, RoutedEventArgs e)
@@ -320,12 +334,12 @@ namespace LiteView.Pages
         private void PenColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
         {
             PenColor = sender.Color;
-            PdfViewer.GetAnnotationCanvas().SetPenColor(PenColor);
+            PdfViewer.SetAnnotationColor(PenColor);
         }
 
         private void StrokeThicknessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
-            PdfViewer.GetAnnotationCanvas().SetStrokeThickness(StrokeThickness);
+            PdfViewer.SetAnnotationThickness(StrokeThickness);
         }
     }
 }

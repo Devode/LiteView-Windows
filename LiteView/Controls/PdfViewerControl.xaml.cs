@@ -79,7 +79,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
     private const double BASIC_DPI = 300;
     // 防抖时间间隔 (毫秒)
-    private const int LOAD_DEBOUNCE_MS = 100;
+    private const int LOAD_DEBOUNCE_MS = 200;
 
     public List<PdfPageViewModel> PdfPages { get; set; } = new();
 
@@ -132,8 +132,14 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         PdfPages.Clear();
     }
 
-    private async void InitializePdf(string pdfPath)
+    private async Task InitializePdf(string pdfPath)
     {
+        // 释放旧的 PdfDocument
+        _pdfDocument?.Dispose();
+        PdfPages.Clear();
+        _pageToTopDistances.Clear();
+        PdfPagesRepeater.ItemsSource = null;
+
         _pdfDocument = PdfDocument.Load(pdfPath);
 
         _averagePageHeight = _pdfDocument.PageSizes.Average(size => size.Height);
@@ -231,35 +237,84 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         var viewportWidth = PdfScrollViewer.ViewportWidth;
         var viewportHeight = PdfScrollViewer.ViewportHeight;
 
-        double zoom;
-        if (pageWidth > pageHeight)
-        {
-            zoom = viewportWidth / pageWidth;
-        }
-        else
-        {
-            zoom = viewportHeight / pageHeight;
-        }
+        double zoom = Math.Min(viewportWidth / pageWidth, viewportHeight / pageHeight);
 
         var horizontalOffset = (PdfScrollViewer.ExtentWidth - PdfScrollViewer.ViewportWidth) / 2.0;
         horizontalOffset = Math.Max(0, Math.Min(horizontalOffset, PdfScrollViewer.ExtentWidth - PdfScrollViewer.ViewportWidth));
 
         PdfScrollViewer.ChangeView(horizontalOffset, _pageToTopDistances[currentPage] * zoom, (float)zoom);
     }
-    public AnnotationCanvasControl GetAnnotationCanvas() => AnnotationCanvas;
+    //public AnnotationCanvasControl GetAnnotationCanvas() => AnnotationCanvas;
 
+    /// <summary>
+    /// 允许或禁止批注操作
+    /// </summary>
+    /// <param name="isAllow">true表示允许，false表示禁止</param>
     public void AllowAnnotate(bool isAllow)
     {
         AnnotationCanvas.IsHitTestVisible = isAllow;
     }
 
-    
+    /// <summary>
+    /// 设置橡皮擦模式
+    /// </summary>
+    /// <param name="isEraseMode">true表示启用橡皮擦模式，false表示禁用</param>
+    public void SetAnnotationEraseMode(bool isEraseMode)
+    {
+        AnnotationCanvas.IsEraser = isEraseMode;
+    }
+
+    /// <summary>
+    /// 设置批注 笔 颜色
+    /// </summary>
+    /// <param name="color">目标颜色</param>
+    public void SetAnnotationColor(Windows.UI.Color color)
+    {
+        AnnotationCanvas.SetPenColor(color);
+    }
+
+    /// <summary>
+    /// 设置批注 笔 厚度
+    /// </summary>
+    /// <param name="thickness">目标厚度</param>
+    public void SetAnnotationThickness(double thickness)
+    {
+        AnnotationCanvas.SetStrokeThickness(thickness);
+    }
+
+    /// <summary>
+    /// 清除所有批注
+    /// </summary>
+    public void ClearAnnotations()
+    {
+        AnnotationCanvas.ClearStrokes();
+    }
+
+    /// <summary>
+    /// 允许或禁止滚动操作
+    /// </summary>
+    /// <param name="isEnabled">true表示允许，false表示禁止</param>
+    public void SetScrollingEnabled(bool isEnabled)
+    {
+        PdfScrollViewer.HorizontalScrollMode = isEnabled ? ScrollMode.Enabled : ScrollMode.Disabled;
+        PdfScrollViewer.VerticalScrollMode = isEnabled ? ScrollMode.Enabled : ScrollMode.Disabled;
+    }
+
+
 
     // 当 PdfPath 修改时，重新加载
     private static void OnPdfPathChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var control = d as PdfViewerControl;
-        control?.InitializePdf((string)e.NewValue);
+
+        try
+        {
+            control?.InitializePdf((string)e.NewValue);
+        }
+        catch (Exception ex)
+        { 
+            Debug.WriteLine($"加载 PDF 文件失败: {ex.Message}");
+        }
     }
 
     private async void PdfScrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
