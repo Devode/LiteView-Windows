@@ -52,10 +52,6 @@ dotnet build LiteView.slnx -c Debug -p:Platform=x64
 dotnet run --project LiteView\LiteView.csproj -c Debug -p:Platform=x64
 ```
 
-### CI 构建
-
-GitHub Actions 工作流（`.github/workflows/dotnet-desktop.yml`）在推送至 `main` 分支时会自动构建 x64 Release MSIX 包。
-
 ## 打包发布
 
 所有支持的平台均有对应的发布配置文件：
@@ -74,10 +70,9 @@ dotnet publish LiteView\LiteView.csproj -c Release -p:Platform=x64 /p:PublishPro
 | 编程语言 | C#（.NET 8） |
 | PDF 引擎 | PDFium（通过 PdfiumViewer + P/Invoke） |
 | 架构模式 | MVVM（CommunityToolkit.Mvvm） |
-| 数据存储 | JSON（System.Text.Json，`%LOCALAPPDATA%\LiteView`） |
+| 数据存储 | JSON（System.Text.Json） |
 | 绘图引擎 | XAML Shapes（Path / PolyQuadraticBezierSegment） |
 | 本地化 | `.resw` 资源文件 |
-| CI/CD | GitHub Actions |
 
 ## 项目结构
 
