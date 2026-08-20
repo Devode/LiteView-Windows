@@ -2,6 +2,7 @@
 using LiteView.Services;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +13,7 @@ namespace LiteView.Contracts
     public interface IPdfDataService
     {
         // 当前 PDF 列表
-        IReadOnlyList<PdfItem> PdfList { get; }
+        ObservableCollection<PdfItem> PdfList { get; }
 
         // 是否正在加载数据
         bool IsLoading { get; }

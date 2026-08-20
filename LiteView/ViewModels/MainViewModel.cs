@@ -98,7 +98,7 @@ namespace LiteView.ViewModels
                     panel.Children.Add(content);
 
                     var result = await _dialogService.ShowAsync(
-                        "检测到新版本", panel, "查看详情", "忽略");
+                        $"检测到新版本 - {latestVersion.VersionName}", panel, "查看详情", "忽略");
 
                     DownloadUrl[] downloadUrl = await _networkService.GetSupabaseDataAsync<DownloadUrl[]>("download_url?version_id=eq.2");
 

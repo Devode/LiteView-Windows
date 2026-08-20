@@ -45,6 +45,8 @@ namespace LiteView.ViewModels
             RemovePdfCommand = new RelayCommand<PdfItem>(OnRemovePdf);
             OpenPdfCommand = new RelayCommand<PdfItem>(OnOpenPdf);
 
+            _pdfItems = _pdfDataService.PdfList;
+
             // 订阅服务列表更新
             _pdfDataService.PdfListUpdated += OnPdfListUpdated;
 
@@ -56,22 +58,22 @@ namespace LiteView.ViewModels
         {
             // 假设服务中已加载数据，直接获取当前列表
             await _pdfDataService.LoadPdfDataAsync(App.CurrentApp.PdfDataFilePath); // 路径可配置
-            // 然后更新自己的集合
-            UpdatePdfList(_pdfDataService.PdfList);
+            //然后更新自己的集合
+            //UpdatePdfList(_pdfDataService.PdfList);
         }
 
         private void OnPdfListUpdated(object? sender, PdfListUpdatedEventArgs e)
         {
-            UpdatePdfList(e.PdfList);
-        }
-
-        private void UpdatePdfList(IEnumerable<PdfItem> items)
-        {
-            PdfItems.Clear();
-            foreach (var item in items)
-                PdfItems.Add(item);
             _emptyVisibility = PdfItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        //private void UpdatePdfList(IEnumerable<PdfItem> items)
+        //{
+        //    //PdfItems.Clear();
+        //    //foreach (var item in items)
+        //    //    PdfItems.Add(item);
+        //    _emptyVisibility = PdfItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        //}
 
         private async Task OnAddPdfAsync()
         {

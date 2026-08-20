@@ -42,7 +42,14 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListViewItem">
-                                    <ContentPresenter />
+                                    <ContentPresenter>
+                                        <ContentPresenter.ContentTransitions>
+                                            <TransitionCollection>
+                                                <AddDeleteThemeTransition />
+                                                <ContentThemeTransition />
+                                            </TransitionCollection>
+                                        </ContentPresenter.ContentTransitions>
+                                    </ContentPresenter>
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>

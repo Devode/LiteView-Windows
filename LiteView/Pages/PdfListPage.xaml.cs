@@ -14,9 +14,9 @@ namespace LiteView.Pages
 
         public PdfListPage()
         {
-            InitializeComponent();
             ViewModel = App.Host!.Services.GetRequiredService<PdfListViewModel>();
-            //DataContext = ViewModel;
+            InitializeComponent();
+            DataContext = ViewModel;
 
             Unloaded += (s, e) => ViewModel.Cleanup();
         }
