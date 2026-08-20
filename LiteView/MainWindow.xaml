@@ -25,7 +25,7 @@
             x:Name="titleBar"
             Title="LiteView"
             IsPaneToggleButtonVisible="True"
-            IsBackButtonVisible="True"
+            IsBackButtonVisible="{x:Bind ViewModel.IsBackButtonVisible, Mode=OneWay}"
             BackRequested="titleBar_BackRequested"
             PaneToggleRequested="titleBar_PaneToggleRequested">
             <TitleBar.IconSource>

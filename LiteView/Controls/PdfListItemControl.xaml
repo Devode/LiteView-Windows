@@ -123,7 +123,8 @@
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     RelativePanel.Below="titleText"
                     Style="{StaticResource CaptionTextBlockStyle}"
-                    TextTrimming="WordEllipsis">
+                    TextTrimming="WordEllipsis"
+                    TextWrapping="NoWrap">
                     <Run x:Uid="ModifiedDate" />
                     <Run Text="{x:Bind Model.ModifyTime, Mode=OneWay}" />
                     <Run Text="    " />

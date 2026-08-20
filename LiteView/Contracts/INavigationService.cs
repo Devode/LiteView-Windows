@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Xaml.Controls;
+﻿using LiteView.Services;
+using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,8 @@ namespace LiteView.Contracts
 {
     public interface INavigationService
     {
+        event EventHandler<NavigatedEventArgs> Navigated;
+
         void Initialize(Frame frame);
 
         bool CanGoBack { get; }

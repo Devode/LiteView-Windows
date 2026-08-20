@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using LiteView.Contracts;
 using LiteView.Models;
 using LiteView.Pages;
+using Microsoft.Windows.BadgeNotifications;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -32,6 +33,9 @@ namespace LiteView.ViewModels
         [ObservableProperty]
         private bool _isPaneOpen = true;
 
+        [ObservableProperty]
+        private bool _isBackButtonVisible = false;
+
         public IRelayCommand<string?> NavigateCommand { get; }
         public IRelayCommand GoBackCommand { get; }
         public IRelayCommand TogglePaneCommand { get; }
@@ -48,8 +52,17 @@ namespace LiteView.ViewModels
             GoBackCommand = new RelayCommand(OnGoBack);
             TogglePaneCommand = new RelayCommand(() => IsPaneOpen = !IsPaneOpen);
 
+            IsBackButtonVisible = _navigationService.CanGoBack;
+
+            _navigationService.Navigated += OnNavigated;
             _pdfDataService.PdfListUpdated += OnPdfListUpdated;
             _ = CheckForUpdateAsync();
+        }
+
+        private void OnNavigated(object? sender, Services.NavigatedEventArgs e)
+        {
+            IsBackButtonVisible = e.CanGoBack;
+            Debug.WriteLine($"CanGoBack: {e.CanGoBack}");
         }
 
         private void OnPdfListUpdated(object? sender, Services.PdfListUpdatedEventArgs e)
@@ -82,12 +95,16 @@ namespace LiteView.ViewModels
 
         private async Task CheckForUpdateAsync()
         {
+            BadgeNotificationManager.Current.ClearBadge();
+
             try
             {
                 var latestVersion = await _updateService.CheckUpdateAsync();
 
                 if (latestVersion != null)
                 {
+                    BadgeNotificationManager.Current.SetBadgeAsGlyph(BadgeNotificationGlyph.Activity);
+
                     var content = $"更新内容：{latestVersion.ReleaseNotes ?? "无"}";
 
                     var result = await _dialogService.ShowAsync(

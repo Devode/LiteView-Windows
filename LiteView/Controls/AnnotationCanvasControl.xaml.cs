@@ -356,7 +356,7 @@ namespace LiteView.Controls
         {
             if (stroke.Points.Count < 2) return null;
 
-            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 1.0f);
+            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 0.5f);
 
             var figure = GenerateBezierPathFigure(simplifiedPoints);
 
@@ -387,7 +387,7 @@ namespace LiteView.Controls
         {
             if (stroke.Points.Count < 2) return null;
 
-            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 1.0f);
+            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 0.5f);
 
             //var figure = GenerateBezierPathFigure(simplifiedPoints);
 
@@ -403,7 +403,7 @@ namespace LiteView.Controls
         {
             if (points.Count < 2) return null;
 
-            List<int> corners = StrokeHelper.DetectCorners(points, 90.0f);
+            List<int> corners = StrokeHelper.DetectCorners(points, 128.0f);
 
             var figure = new PathFigure { StartPoint = points[0].ToPoint() };
             var seg = new PolyQuadraticBezierSegment();
