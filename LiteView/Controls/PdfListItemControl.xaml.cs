@@ -1,4 +1,6 @@
+using LiteView.Contracts;
 using LiteView.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -12,6 +14,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Windows.Input;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
@@ -27,12 +30,27 @@ namespace LiteView.Controls
             InitializeComponent();
         }
 
+        public ICommand RemoveCommand
+        {
+            get => (ICommand)GetValue(RemoveCommandProperty);
+            set => SetValue(RemoveCommandProperty, value);
+        }
+        public static readonly DependencyProperty RemoveCommandProperty =
+            DependencyProperty.Register(nameof(RemoveCommand), typeof(ICommand), typeof(PdfListItemControl), new PropertyMetadata(null));
+
+        public object CommandParameter
+        {
+            get => GetValue(CommandParameterProperty);
+            set => SetValue(CommandParameterProperty, value);
+        }
+        public static readonly DependencyProperty CommandParameterProperty =
+            DependencyProperty.Register(nameof(CommandParameter), typeof(object), typeof(PdfListItemControl), new PropertyMetadata(null));
+
         public PdfItem Model
         {
             get { return (PdfItem)GetValue(ModelProperty); }
             set { SetValue(ModelProperty, value); }
         }
-
         public static readonly DependencyProperty ModelProperty =
             DependencyProperty.Register("Model", typeof(PdfItem), typeof(PdfListItemControl), new PropertyMetadata(null, OnModelChanged));
 
@@ -82,7 +100,7 @@ namespace LiteView.Controls
 
         private void RemoveItem_Click(object sender, RoutedEventArgs e)
         {
-            App.CurrentApp.PdfService.RemovePdf(Model);
+            (App.Host!.Services.GetRequiredService<IPdfDataService>() as LiteView.Services.PdfDataService).RemovePdf(Model);
         }
     }
 }

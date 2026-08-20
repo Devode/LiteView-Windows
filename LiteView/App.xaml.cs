@@ -1,95 +1,113 @@
-﻿using LiteView.Helpers;
+﻿using LiteView.Contracts;
+using LiteView.Helpers;
 using LiteView.Services;
+using LiteView.ViewModels;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading.Tasks;
+using System.Net.Http;
+using System.Diagnostics;
 using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Storage;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace LiteView
 {
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
     public partial class App : Application
     {
-
         private Window? _window;
 
         public static MainWindow MainWindowInstance { get; private set; }
+        public static IHost? Host { get; private set; }
+
         public const int VERSION_CODE = 0;
 
-        public PdfDataService PdfService { get; } = new PdfDataService();
         public string LocalFolderPath;
         public string PdfDataFilePath;
 
         public static App CurrentApp => (App)Current;
 
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
+        public static IPdfDataService PdfService => Host!.Services.GetRequiredService<IPdfDataService>();
+
         public App()
         {
-            //Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = "en-US";
             InitializeComponent();
         }
 
-        /// <summary>
-        /// Invoked when the application is launched.
-        /// </summary>
-        /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            Init();            
+            Init();
         }
 
-        private async void Init()
+        private void Init()
         {
-            LoadData();
+            Debug.WriteLine("[Init] Building host...");
+            Host = Microsoft.Extensions.Hosting.Host
+                .CreateDefaultBuilder()
+                .ConfigureAppConfiguration((context, config) =>
+                {
+                    config.Sources.Clear();
+                    var baseDir = Path.GetDirectoryName(AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
+                    config.AddJsonFile(Path.Combine(baseDir, "appsettings.json"), optional: false, reloadOnChange: false);
+                })
+                .ConfigureServices((context, services) =>
+                {
+                    services.AddSingleton<HttpClient>(sp => new HttpClient());
+
+                    services.AddSingleton<IPdfDataService, PdfDataService>();
+                    services.AddSingleton<INetworkService, NetworkService>();
+                    services.AddSingleton<IUpdateService, UpdateService>();
+                    services.AddSingleton<IMessageDialogService, MessageDialogService>();
+                    services.AddSingleton<INavigationService, NavigationService>();
+                    services.AddSingleton<IFilePickerService, FilePickerService>();
+
+                    services.AddTransient<MainViewModel>();
+                    services.AddTransient<PdfListViewModel>();
+
+                    services.AddSingleton<MainWindow>();
+                })
+                .Build();
+
+            Debug.WriteLine("[Init] Host built, starting...");
+            Host.Start();
+            Debug.WriteLine("[Init] Host started.");
+
+            var pdfService = Host.Services.GetRequiredService<IPdfDataService>();
+
+            LoadData(pdfService);
+            Debug.WriteLine("[Init] Data loaded.");
 
             var localSettings = ApplicationData.Current.LocalSettings;
-            ElementTheme themeToApply = ElementTheme.Default; // 默认值，初始化将要应用的主题
+            ElementTheme themeToApply = ElementTheme.Default;
 
             if (localSettings.Values.ContainsKey("AppTheme"))
             {
                 var savedTheme = localSettings.Values["AppTheme"].ToString();
-                System.Diagnostics.Debug.WriteLine(savedTheme);
+                Debug.WriteLine($"[Init] Theme: {savedTheme}");
                 Enum.TryParse(savedTheme, out themeToApply);
             }
 
-            _window = new MainWindow();
+            Debug.WriteLine("[Init] Resolving MainWindow...");
+            _window = Host.Services.GetRequiredService<MainWindow>();
+            Debug.WriteLine("[Init] MainWindow resolved.");
 
             ThemeHelper.RootTheme = themeToApply;
 
             MainWindowInstance = (MainWindow)_window;
 
+            Debug.WriteLine("[Init] Activating window...");
             _window.Activate();
+            Debug.WriteLine("[Init] Window activated.");
         }
 
-        private async void LoadData()
+        private void LoadData(IPdfDataService pdfService)
         {
             LocalFolderPath = ApplicationData.Current.LocalFolder.Path;
             PdfDataFilePath = System.IO.Path.Combine(LocalFolderPath, "pdf_list_data.json");
 
-            await PdfService.LoadPdfDataAsync(PdfDataFilePath);
+            _ = pdfService.LoadPdfDataAsync(PdfDataFilePath);
         }
     }
 }

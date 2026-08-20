@@ -26,6 +26,11 @@
     <Content Remove="Assets\Icons\LiteViewIcon.png" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="Assets\Icons\LargeTile.scale-100.png" />
     <None Remove="Assets\Icons\LargeTile.scale-200.png" />
     <None Remove="Assets\Icons\LargeTile.scale-400.png" />
@@ -87,6 +92,7 @@
   <ItemGroup>
     <PackageReference Include="bblanchon.PDFium.Win32" Version="150.0.7843" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
     <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3856.49" />

@@ -17,12 +17,14 @@ namespace LiteView.Services
         public PdfListUpdatedEventArgs(ObservableCollection<PdfItem> list) => PdfList = list;
     }
 
-    public class PdfDataService
+    public class PdfDataService : LiteView.Contracts.IPdfDataService
     {
         /// <summary>
         /// 全局共享的数据列表
         /// </summary>
         public ObservableCollection<PdfItem> PdfList { get; } = new();
+
+        IReadOnlyList<PdfItem> LiteView.Contracts.IPdfDataService.PdfList => PdfList;
 
         public event EventHandler<PdfListUpdatedEventArgs> PdfListUpdated;
 
