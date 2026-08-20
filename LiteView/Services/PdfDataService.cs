@@ -75,17 +75,19 @@ namespace LiteView.Services
         /// </summary>
         /// <param name="dataFilePath">数据文件路径</param>
         /// <returns></returns>
-        public async Task LoadPdfDataAsync(string dataFilePath)
+        public async System.Threading.Tasks.Task LoadPdfDataAsync(string dataFilePath)
         {
-            if (IsLoading) return;  // 防止重复加载
+            if (IsLoading) return;
 
             IsLoading = true;
-            NotifyListChanged();    // 可用于通知 UI 显示 Loading 动画
 
-            // 加载数据
-            var items = await Task.Run(() => LoadDataFileAsync(dataFilePath));
+            var items = await System.Threading.Tasks.Task.Run(() => LoadDataFileAsync(dataFilePath));
 
-            if (items == null) return;
+            if (items == null)
+            {
+                IsLoading = false;
+                return;
+            }
             
             PdfList.Clear();
             foreach (var item in items) PdfList.Add(item);

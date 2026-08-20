@@ -79,7 +79,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
     private const double BASIC_DPI = 300;
     // 防抖时间间隔 (毫秒)
-    private const int LOAD_DEBOUNCE_MS = 200;
+    private const int LOAD_DEBOUNCE_MS = 100;
 
     public List<PdfPageViewModel> PdfPages { get; set; } = new();
 

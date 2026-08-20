@@ -100,6 +100,7 @@ namespace LiteView.Pages
             InitializeComponent();
 
             PdfViewer.PropertyChanged += PdfViewer_PropertyChanged;
+            Unloaded += (s, e) => PdfViewer.PropertyChanged -= PdfViewer_PropertyChanged;
         }
 
         private void PdfViewer_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

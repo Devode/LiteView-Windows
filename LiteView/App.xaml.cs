@@ -43,7 +43,6 @@ namespace LiteView
 
         private void Init()
         {
-            Debug.WriteLine("[Init] Building host...");
             Host = Microsoft.Extensions.Hosting.Host
                 .CreateDefaultBuilder()
                 .ConfigureAppConfiguration((context, config) =>
@@ -70,14 +69,13 @@ namespace LiteView
                 })
                 .Build();
 
-            Debug.WriteLine("[Init] Host built, starting...");
             Host.Start();
-            Debug.WriteLine("[Init] Host started.");
 
             var pdfService = Host.Services.GetRequiredService<IPdfDataService>();
 
-            LoadData(pdfService);
-            Debug.WriteLine("[Init] Data loaded.");
+            LocalFolderPath = ApplicationData.Current.LocalFolder.Path;
+            PdfDataFilePath = System.IO.Path.Combine(LocalFolderPath, "pdf_list_data.json");
+            _ = pdfService.LoadPdfDataAsync(PdfDataFilePath);
 
             var localSettings = ApplicationData.Current.LocalSettings;
             ElementTheme themeToApply = ElementTheme.Default;
@@ -85,29 +83,16 @@ namespace LiteView
             if (localSettings.Values.ContainsKey("AppTheme"))
             {
                 var savedTheme = localSettings.Values["AppTheme"].ToString();
-                Debug.WriteLine($"[Init] Theme: {savedTheme}");
                 Enum.TryParse(savedTheme, out themeToApply);
             }
 
-            Debug.WriteLine("[Init] Resolving MainWindow...");
             _window = Host.Services.GetRequiredService<MainWindow>();
-            Debug.WriteLine("[Init] MainWindow resolved.");
-
-            ThemeHelper.RootTheme = themeToApply;
 
             MainWindowInstance = (MainWindow)_window;
 
-            Debug.WriteLine("[Init] Activating window...");
+            ThemeHelper.RootTheme = themeToApply;
+
             _window.Activate();
-            Debug.WriteLine("[Init] Window activated.");
-        }
-
-        private void LoadData(IPdfDataService pdfService)
-        {
-            LocalFolderPath = ApplicationData.Current.LocalFolder.Path;
-            PdfDataFilePath = System.IO.Path.Combine(LocalFolderPath, "pdf_list_data.json");
-
-            _ = pdfService.LoadPdfDataAsync(PdfDataFilePath);
         }
     }
 }

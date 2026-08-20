@@ -5,11 +5,9 @@ using LiteView.Models;
 using LiteView.Pages;
 using LiteView.Services;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using System.Collections.Generic;
+using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace LiteView.ViewModels
 {
@@ -46,43 +44,27 @@ namespace LiteView.ViewModels
             OpenPdfCommand = new RelayCommand<PdfItem>(OnOpenPdf);
 
             _pdfItems = _pdfDataService.PdfList;
-
-            // 订阅服务列表更新
             _pdfDataService.PdfListUpdated += OnPdfListUpdated;
 
-            // 初始化加载数据
-            _ = LoadDataAsync();
-        }
-
-        private async Task LoadDataAsync()
-        {
-            // 假设服务中已加载数据，直接获取当前列表
-            await _pdfDataService.LoadPdfDataAsync(App.CurrentApp.PdfDataFilePath); // 路径可配置
-            //然后更新自己的集合
-            //UpdatePdfList(_pdfDataService.PdfList);
+            UpdateEmptyVisibility();
         }
 
         private void OnPdfListUpdated(object? sender, PdfListUpdatedEventArgs e)
         {
-            _emptyVisibility = PdfItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            UpdateEmptyVisibility();
         }
 
-        //private void UpdatePdfList(IEnumerable<PdfItem> items)
-        //{
-        //    //PdfItems.Clear();
-        //    //foreach (var item in items)
-        //    //    PdfItems.Add(item);
-        //    _emptyVisibility = PdfItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        //}
-
-        private async Task OnAddPdfAsync()
+        private void UpdateEmptyVisibility()
         {
-            // 选择文件
+            EmptyVisibility = PdfItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private async System.Threading.Tasks.Task OnAddPdfAsync()
+        {
             var filePath = await _filePickerService.PickSingleFileAsync(new[] { ".pdf" });
             if (string.IsNullOrEmpty(filePath))
                 return;
 
-            // 检查重复
             foreach (var item in PdfItems)
             {
                 if (item.FilePath == filePath)
@@ -100,14 +82,11 @@ namespace LiteView.ViewModels
                 ModifyTime = fileInfo.LastWriteTime.ToString()
             };
 
-            // 通过服务添加
             _pdfDataService.AddPdf(pdf);
-            // 服务触发事件会自动更新列表
         }
 
         private void OnRemovePdf(PdfItem pdf)
         {
-            Debug.WriteLine("RemovePdf");
             if (pdf == null) return;
             _pdfDataService.RemovePdf(pdf);
         }
@@ -116,14 +95,12 @@ namespace LiteView.ViewModels
         {
             if (pdf == null) return;
 
-            // 检查文件是否存在
             if (!System.IO.File.Exists(pdf.FilePath))
             {
                 _ = _dialogService.ShowAsync("文件不存在", $"无法找到文件：{pdf.FilePath}\n请检查文件路径是否正确。", null, "关闭");
                 return;
             }
 
-            // 导航到阅读器页面，传递 PdfItem
             _navigationService.NavigateTo<PdfViewerPage>(pdf);
         }
 

@@ -3,14 +3,11 @@ using CommunityToolkit.Mvvm.Input;
 using LiteView.Contracts;
 using LiteView.Models;
 using LiteView.Pages;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Data;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LiteView.ViewModels
@@ -35,7 +32,7 @@ namespace LiteView.ViewModels
         [ObservableProperty]
         private bool _isPaneOpen = true;
 
-        public IRelayCommand<NavigationViewItem> NavigateCommand { get; }
+        public IRelayCommand<string?> NavigateCommand { get; }
         public IRelayCommand GoBackCommand { get; }
         public IRelayCommand TogglePaneCommand { get; }
 
@@ -47,7 +44,7 @@ namespace LiteView.ViewModels
             _navigationService = navigationService;
             _dialogService = dialogService;
 
-            NavigateCommand = new RelayCommand<NavigationViewItem>(OnNavigate);
+            NavigateCommand = new RelayCommand<string?>(OnNavigate);
             GoBackCommand = new RelayCommand(OnGoBack);
             TogglePaneCommand = new RelayCommand(() => IsPaneOpen = !IsPaneOpen);
 
@@ -64,12 +61,12 @@ namespace LiteView.ViewModels
                 PdfItemNames.Add(pdfItem.FileName);
             }
 
-            _pdfDataService.SavePdfDataAsync(App.CurrentApp.PdfDataFilePath);
+            _ = _pdfDataService.SavePdfDataAsync(App.CurrentApp.PdfDataFilePath);
         }
 
-        private void OnNavigate(NavigationViewItem item)
+        private void OnNavigate(string? tag)
         {
-            switch (item?.Tag?.ToString())
+            switch (tag)
             {
                 case "PdfListPage": _navigationService.NavigateTo<PdfListPage>(); break;
                 case "PdfViewerPage": _navigationService.NavigateTo<PdfViewerPage>(); break;
@@ -91,27 +88,25 @@ namespace LiteView.ViewModels
 
                 if (latestVersion != null)
                 {
-                    var title = new TextBlock { Text = "更新内容" };
-                    var content = new TextBlock { Text = latestVersion.ReleaseNotes };
-                    var panel = new StackPanel();
-                    panel.Children.Add(title);
-                    panel.Children.Add(content);
+                    var content = $"更新内容：{latestVersion.ReleaseNotes ?? "无"}";
 
                     var result = await _dialogService.ShowAsync(
-                        $"检测到新版本 - {latestVersion.VersionName}", panel, "查看详情", "忽略");
+                        "检测到新版本", content, "查看详情", "忽略");
 
-                    DownloadUrl[] downloadUrl = await _networkService.GetSupabaseDataAsync<DownloadUrl[]>("download_url?version_id=eq.2");
+                    var downloadUrls = await _networkService.GetSupabaseDataAsync<DownloadUrl[]>("download_url?version_id=eq.2");
 
-
-                    if (result == ContentDialogResult.Primary && !string.IsNullOrEmpty(downloadUrl[0].Url))
+                    if (result == Contracts.DialogResult.Primary
+                        && downloadUrls != null
+                        && downloadUrls.Length > 0
+                        && !string.IsNullOrEmpty(downloadUrls[0].Url))
                     {
-                        await Windows.System.Launcher.LaunchUriAsync(new Uri(downloadUrl[0].Url));
+                        await Windows.System.Launcher.LaunchUriAsync(new Uri(downloadUrls[0].Url));
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CheckForUpdate] {ex.Message}");
+                Debug.WriteLine($"[CheckForUpdate] {ex.Message}");
             }
         }
 

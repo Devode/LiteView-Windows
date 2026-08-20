@@ -12,8 +12,8 @@ namespace LiteView.Services
 
         public MessageDialogService(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
-        public async Task<ContentDialogResult> ShowAsync(string title, object content,
-                                                         string primaryText, string closeText)
+        public async Task<DialogResult> ShowAsync(string title, string content,
+                                                  string primaryText, string closeText)
         {
             var window = _serviceProvider.GetRequiredService<MainWindow>();
             var dialog = new ContentDialog
@@ -25,7 +25,8 @@ namespace LiteView.Services
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = window.Content.XamlRoot
             };
-            return await dialog.ShowAsync();
+            var result = await dialog.ShowAsync();
+            return result == ContentDialogResult.Primary ? DialogResult.Primary : DialogResult.Close;
         }
     }
 }
