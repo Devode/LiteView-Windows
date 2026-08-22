@@ -3,8 +3,17 @@ using Microsoft.UI.Xaml;
 
 namespace LiteView.Helpers
 {
+    /// <summary>
+    /// Centralizes application-wide theme management. Sets the RequestedTheme on the
+    /// main window's root element and updates title bar button colors accordingly.
+    /// Uses a static reference to MainWindow — safe for single-window apps.
+    /// </summary>
     public static partial class ThemeHelper
     {
+        /// <summary>
+        /// Gets or sets the application-wide theme. Setting this updates both the
+        /// root element's RequestedTheme and the title bar button foreground color.
+        /// </summary>
         public static ElementTheme RootTheme
         {
             get

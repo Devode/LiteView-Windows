@@ -8,6 +8,15 @@ using System.Windows.Input;
 
 namespace LiteView.Controls
 {
+    /// <summary>
+    /// Custom list item for the PDF reading list. Exposes a <see cref="RemoveCommand"/>
+    /// and a <see cref="Model"/> property for data binding, with hover visual states.
+    ///
+    /// NOTE: RemoveCommand DP exists for XAML binding but is never wired up.
+    /// The actual remove action is handled by RemoveItem_Click, which uses the service
+    /// locator to call IPdfDataService.RemovePdf directly. This is an inconsistency —
+    /// the DP is dead weight and could be removed.
+    /// </summary>
     public sealed partial class PdfListItemControl : UserControl
     {
         public PdfListItemControl()

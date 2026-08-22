@@ -1,15 +1,15 @@
 ﻿using LiteView.Contracts;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.UI.Xaml;
 using Microsoft.Windows.Storage.Pickers;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LiteView.Services
 {
+    /// <summary>
+    /// Shows the WinUI <see cref="FileOpenPicker"/> using the main window's AppWindow handle.
+    /// Resolves <see cref="MainWindow"/> lazily to break the circular DI dependency.
+    /// </summary>
     public class FilePickerService : IFilePickerService
     {
         private readonly IServiceProvider _serviceProvider;
@@ -19,6 +19,7 @@ namespace LiteView.Services
             _serviceProvider = serviceProvider;
         }
 
+        /// <inheritdoc/>
         public async Task<string?> PickSingleFileAsync(string[] fileTypes, PickerLocationId startLocation = PickerLocationId.DocumentsLibrary)
         {
             var window = _serviceProvider.GetRequiredService<MainWindow>();

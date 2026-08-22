@@ -11,6 +11,10 @@ using System.Diagnostics;
 
 namespace LiteView.ViewModels
 {
+    /// <summary>
+    /// ViewModel for the PDF reading list page. Exposes commands for adding,
+    /// removing, and opening PDFs, and manages the empty-state visibility.
+    /// </summary>
     public partial class PdfListViewModel : ObservableObject
     {
         private readonly IPdfDataService _pdfDataService;
@@ -18,14 +22,26 @@ namespace LiteView.ViewModels
         private readonly IMessageDialogService _dialogService;
         private readonly IFilePickerService _filePickerService;
 
+        /// <summary>
+        /// Shares the same <see cref="ObservableCollection{T}"/> instance as
+        /// <see cref="IPdfDataService.PdfList"/> so that mutations are reflected immediately.
+        /// </summary>
         [ObservableProperty]
         private ObservableCollection<PdfItem> _pdfItems = new();
 
+        /// <summary>
+        /// Controls the visibility of the "no items" placeholder in the list.
+        /// </summary>
         [ObservableProperty]
         private Visibility _emptyVisibility = Visibility.Visible;
 
+        /// <summary>Open a file picker, validate the selection, and add the PDF to the list.</summary>
         public IAsyncRelayCommand AddPdfCommand { get; }
+
+        /// <summary>Remove a PDF from the list.</summary>
         public IRelayCommand RemovePdfCommand { get; }
+
+        /// <summary>Navigate to the PDF viewer page for the selected item.</summary>
         public IRelayCommand<PdfItem> OpenPdfCommand { get; }
 
         public PdfListViewModel(
@@ -43,6 +59,7 @@ namespace LiteView.ViewModels
             RemovePdfCommand = new RelayCommand<PdfItem>(OnRemovePdf);
             OpenPdfCommand = new RelayCommand<PdfItem>(OnOpenPdf);
 
+            // Share the same collection reference — mutations in the service are reflected here.
             _pdfItems = _pdfDataService.PdfList;
             _pdfDataService.PdfListUpdated += OnPdfListUpdated;
 
@@ -59,12 +76,16 @@ namespace LiteView.ViewModels
             EmptyVisibility = PdfItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        /// <summary>
+        /// Prompt the user to pick a .pdf file, reject duplicates, and add it to the data service.
+        /// </summary>
         private async System.Threading.Tasks.Task OnAddPdfAsync()
         {
             var filePath = await _filePickerService.PickSingleFileAsync(new[] { ".pdf" });
             if (string.IsNullOrEmpty(filePath))
                 return;
 
+            // Reject duplicates by full path
             foreach (var item in PdfItems)
             {
                 if (item.FilePath == filePath)
@@ -91,6 +112,9 @@ namespace LiteView.ViewModels
             _pdfDataService.RemovePdf(pdf);
         }
 
+        /// <summary>
+        /// Validate that the file still exists on disk, then navigate to the viewer page.
+        /// </summary>
         private void OnOpenPdf(PdfItem pdf)
         {
             if (pdf == null) return;
@@ -104,6 +128,9 @@ namespace LiteView.ViewModels
             _navigationService.NavigateTo<PdfViewerPage>(pdf);
         }
 
+        /// <summary>
+        /// Unsubscribe from data service events. Called on page Unloaded and OnNavigatedFrom.
+        /// </summary>
         public void Cleanup()
         {
             _pdfDataService.PdfListUpdated -= OnPdfListUpdated;

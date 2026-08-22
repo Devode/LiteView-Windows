@@ -5,14 +5,16 @@ using LiteView.Models;
 using LiteView.Pages;
 using Microsoft.Windows.BadgeNotifications;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace LiteView.ViewModels
 {
+    /// <summary>
+    /// ViewModel for the application shell (title bar, navigation, search).
+    /// Owns the navigation commands, the search suggestion list, and the background update check.
+    /// </summary>
     public partial class MainViewModel : ObservableObject
     {
         private readonly IPdfDataService _pdfDataService;
@@ -21,26 +23,40 @@ namespace LiteView.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IMessageDialogService _dialogService;
 
+        /// <summary>All known PDF file names, kept in sync via <see cref="IPdfDataService.PdfListUpdated"/>.</summary>
         [ObservableProperty]
         private ObservableCollection<string> _pdfItemNames = new();
 
+        /// <summary>Current text in the search box. Two-way bound in XAML.</summary>
         [ObservableProperty]
         private string _searchText;
 
+        /// <summary>Filtered suggestions displayed in the search flyout.</summary>
         [ObservableProperty]
         private ObservableCollection<string> _suggestionItems = new();
 
+        /// <summary>Whether the navigation pane is expanded.</summary>
         [ObservableProperty]
         private bool _isPaneOpen = true;
 
+        /// <summary>Controls visibility of the back button in the title bar.</summary>
         [ObservableProperty]
         private bool _isBackButtonVisible = false;
 
+        /// <summary>Navigate to a page by its tag string ("PdfListPage", "PdfViewerPage", or null for settings).</summary>
         public IRelayCommand<string?> NavigateCommand { get; }
+
+        /// <summary>Go back in the navigation frame.</summary>
         public IRelayCommand GoBackCommand { get; }
+
+        /// <summary>Toggle the navigation pane open/closed.</summary>
         public IRelayCommand TogglePaneCommand { get; }
 
-        public MainViewModel(IPdfDataService pdfDataService, IUpdateService updateService, INetworkService networkService, INavigationService navigationService, IMessageDialogService dialogService)
+        public MainViewModel(IPdfDataService pdfDataService, 
+                             IUpdateService updateService, 
+                             INetworkService networkService, 
+                             INavigationService navigationService, 
+                             IMessageDialogService dialogService)
         {
             _pdfDataService = pdfDataService;
             _updateService = updateService;
@@ -56,15 +72,20 @@ namespace LiteView.ViewModels
 
             _navigationService.Navigated += OnNavigated;
             _pdfDataService.PdfListUpdated += OnPdfListUpdated;
+
+            // Fire-and-forget: check for updates on startup
             _ = CheckForUpdateAsync();
         }
 
         private void OnNavigated(object? sender, Services.NavigatedEventArgs e)
         {
             IsBackButtonVisible = e.CanGoBack;
-            Debug.WriteLine($"CanGoBack: {e.CanGoBack}");
         }
 
+        /// <summary>
+        /// Rebuild the flat name list from the data service's current list,
+        /// then persist the data so any structural changes (e.g. reordering) are saved.
+        /// </summary>
         private void OnPdfListUpdated(object? sender, Services.PdfListUpdatedEventArgs e)
         {
             PdfItemNames.Clear();
@@ -93,6 +114,10 @@ namespace LiteView.ViewModels
                 _navigationService.GoBack();
         }
 
+        /// <summary>
+        /// Query Supabase for the latest version. If newer than the running package,
+        /// show a badge glyph and prompt the user with a dialog.
+        /// </summary>
         private async Task CheckForUpdateAsync()
         {
             BadgeNotificationManager.Current.ClearBadge();
@@ -105,11 +130,15 @@ namespace LiteView.ViewModels
                 {
                     BadgeNotificationManager.Current.SetBadgeAsGlyph(BadgeNotificationGlyph.Activity);
 
-                    var content = $"更新内容：{latestVersion.ReleaseNotes ?? "无"}";
+                    var content = $"Update notes: {latestVersion.ReleaseNotes ?? "None"}";
 
                     var result = await _dialogService.ShowAsync(
-                        "检测到新版本", content, "查看详情", "忽略");
+                        "Update available", content, "View details", "Ignore");
 
+                    // NOTE: "version_id=eq.2" is a hardcoded Supabase filter targeting version_id = 2.
+                    // The returned array ordering depends on database row order (no explicit ORDER BY).
+                    // downloadUrls[0] is assumed to be the correct URL; if multiple rows exist,
+                    // the first one returned wins — this is fragile and should be parameterized.
                     var downloadUrls = await _networkService.GetSupabaseDataAsync<DownloadUrl[]>("download_url?version_id=eq.2");
 
                     if (result == Contracts.DialogResult.Primary
@@ -127,6 +156,10 @@ namespace LiteView.ViewModels
             }
         }
 
+        /// <summary>
+        /// CommunityToolkit partial method: called whenever <see cref="SearchText"/> changes.
+        /// Populates <see cref="SuggestionItems"/> with case-insensitive matches.
+        /// </summary>
         partial void OnSearchTextChanged(string value)
         {
             SuggestionItems.Clear();
@@ -140,6 +173,9 @@ namespace LiteView.ViewModels
             }
         }
 
+        /// <summary>
+        /// Unsubscribe from events. Call when the owning Window closes.
+        /// </summary>
         public void Cleanup()
         {
             _pdfDataService.PdfListUpdated -= OnPdfListUpdated;

@@ -3,31 +3,26 @@ using LiteView.Native;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage.Streams;
 
 namespace LiteView.Helpers
 {
+    /// <summary>
+    /// Utility methods for converting between image formats and assembling
+    /// raw PDFium pixel data into WinUI <see cref="WriteableBitmap"/> objects.
+    /// </summary>
     public static class ImageHelper
     {
         /// <summary>
-        /// 将 System.Drawing.Image 转换为 IRandomAccessStream
+        /// Convert a System.Drawing.Image (GDI+) to a WinUI BitmapImage,
+        /// marshalling through an in-memory stream. Handles thread affinity
+        /// by dispatching to the UI thread if needed.
         /// </summary>
-        /// <param name="image"></param>
-        /// <returns></returns>
         public static async Task<BitmapImage> ConvertToBitmapImage(System.Drawing.Image image)
         {
-            //var memoryStream = new InMemoryRandomAccessStream();
-            
-            //image.Save(memoryStream.AsStream(), System.Drawing.Imaging.ImageFormat.Png);
-            
-            //memoryStream.Seek(0);
-            //return memoryStream;
             using (var memoryStream = new MemoryStream())
             {
                 image.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
@@ -56,20 +51,12 @@ namespace LiteView.Helpers
                         return await CreateBitmapAsync(randomAccessStream);
                     });
                 }
-
-                //var bitmapImage = new BitmapImage();
-                //bitmapImage.DecodePixelType = DecodePixelType.Logical;
-                //await bitmapImage.SetSourceAsync(randomAccessStream);
-                //return bitmapImage;
-
             }
         }
 
         /// <summary>
-        /// 组装 Bitamp
+        /// Assemble a WriteableBitmap from raw BGRA pixel data.
         /// </summary>
-        /// <param name="rawBitmapData"></param>
-        /// <returns></returns>
         public static async Task<WriteableBitmap> AssembleBitmapAsync(RawBitmapData rawBitmapData)
         {
             var bitmap = new WriteableBitmap(rawBitmapData.Width, rawBitmapData.Height);
@@ -88,6 +75,5 @@ namespace LiteView.Helpers
             await bitmapImage.SetSourceAsync(stream);
             return bitmapImage;
         }
-
     }
 }

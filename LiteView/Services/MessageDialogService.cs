@@ -6,12 +6,18 @@ using System.Threading.Tasks;
 
 namespace LiteView.Services
 {
+    /// <summary>
+    /// Shows a WinUI <see cref="ContentDialog"/> using the main window's XamlRoot.
+    /// Resolves <see cref="MainWindow"/> lazily from the DI container to break the
+    /// circular dependency (MainWindow → MainViewModel → IMessageDialogService → MainWindow).
+    /// </summary>
     public class MessageDialogService : IMessageDialogService
     {
         private readonly IServiceProvider _serviceProvider;
 
         public MessageDialogService(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
+        /// <inheritdoc/>
         public async Task<DialogResult> ShowAsync(string title, string content,
                                                   string primaryText, string closeText)
         {

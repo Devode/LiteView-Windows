@@ -8,8 +8,14 @@ using System.Diagnostics;
 
 namespace LiteView
 {
+    /// <summary>
+    /// Application shell. Hosts the NavigationView, TitleBar, and Frame.
+    /// Resolves <see cref="MainViewModel"/> from DI and wires up navigation
+    /// selection changes to the ViewModel's NavigateCommand.
+    /// </summary>
     public sealed partial class MainWindow : Window
     {
+        /// <summary>Static reference used by <see cref="Helpers.ThemeHelper"/> for theme application.</summary>
         public static MainWindow current;
 
         public MainViewModel ViewModel;
@@ -28,6 +34,12 @@ namespace LiteView
             AppWindow.TitleBar.PreferredHeightOption = Microsoft.UI.Windowing.TitleBarHeightOption.Tall;
 
             _navigationService?.Initialize(navFrame);
+
+            // Double navigation is intentional:
+            // 1. Setting navView.SelectedItem highlights the default item (PDF list icon).
+            // 2. NavigateCommand.Execute performs the actual Frame.Navigate via the ViewModel.
+            // Both are needed because SelectionChanged alone doesn't fire for programmatic
+            // SelectedItem assignment when it's already the default selection.
             navView.SelectedItem = navView.MenuItems[0];
 
             var tag = (navView.SelectedItem as NavigationViewItem)?.Tag?.ToString();

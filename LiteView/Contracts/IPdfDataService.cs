@@ -3,50 +3,55 @@ using LiteView.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace LiteView.Contracts
 {
+    /// <summary>
+    /// Manages the in-memory PDF list and persists it to a local JSON file.
+    /// All mutations go through this service so that subscribers are notified via <see cref="PdfListUpdated"/>.
+    /// </summary>
     public interface IPdfDataService
     {
-        // 当前 PDF 列表
+        /// <summary>
+        /// The shared, observable collection of PDF items. Consumers may bind directly to this.
+        /// </summary>
         ObservableCollection<PdfItem> PdfList { get; }
 
-        // 是否正在加载数据
+        /// <summary>
+        /// True while a <see cref="LoadPdfDataAsync"/> operation is in progress.
+        /// </summary>
         bool IsLoading { get; }
 
-        // 列表变更事件（UI 可订阅刷新）
+        /// <summary>
+        /// Raised after any mutation (add, remove, bulk load) so that ViewModels can refresh.
+        /// </summary>
         event EventHandler<PdfListUpdatedEventArgs> PdfListUpdated;
 
         /// <summary>
-        /// 添加 PdfItem
+        /// Add a single PDF entry and raise <see cref="PdfListUpdated"/>.
         /// </summary>
-        /// <param name="pdfItem"></param>
         void AddPdf(PdfItem pdfItem);
 
         /// <summary>
-        /// 添加多个 PdfItem (列表形式)
+        /// Add multiple PDF entries in bulk and raise <see cref="PdfListUpdated"/> once.
         /// </summary>
-        /// <param name="pdfs">PdfItem 列表</param>
         void AddPdfs(List<PdfItem> pdfs);
 
+        /// <summary>
+        /// Remove a PDF entry and raise <see cref="PdfListUpdated"/>.
+        /// </summary>
         void RemovePdf(PdfItem pdfItem);
 
         /// <summary>
-        /// 异步加载 PDF 数据
+        /// Deserialize the JSON file at <paramref name="dataFilePath"/> and populate <see cref="PdfList"/>.
+        /// Guarded by <see cref="IsLoading"/> to prevent concurrent loads.
         /// </summary>
-        /// <param name="dataFilePath">数据文件路径</param>
-        /// <returns></returns>
         Task LoadPdfDataAsync(string dataFilePath);
 
         /// <summary>
-        /// 异步保存 PDF 数据
+        /// Serialize <see cref="PdfList"/> to the JSON file at <paramref name="dataFilePath"/>.
         /// </summary>
-        /// <param name="dataFilePath">数据文件路径</param>
-        /// <returns></returns>
         Task SavePdfDataAsync(string dataFilePath);
     }
 }

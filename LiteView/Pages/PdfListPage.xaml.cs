@@ -8,6 +8,11 @@ using System.Diagnostics;
 
 namespace LiteView.Pages
 {
+    /// <summary>
+    /// Displays the user's PDF reading list. Resolves <see cref="PdfListViewModel"/>
+    /// from the DI container and binds it as DataContext. Cleans up event subscriptions
+    /// on both Unloaded and OnNavigatedFrom to prevent leaks.
+    /// </summary>
     public sealed partial class PdfListPage : Page
     {
         public PdfListViewModel ViewModel { get; }

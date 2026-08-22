@@ -1,15 +1,12 @@
-﻿using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.Win32.SafeHandles;
+﻿using Microsoft.Win32.SafeHandles;
 using System;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
-using Windows.Graphics.Imaging;
 
 namespace LiteView.Native;
 
-#region
+#region Safe handles
 
-/// <summary>PDF 文档安全句柄</summary>
+/// <summary>Safe handle for a PDFium document pointer.</summary>
 public sealed class PdfDocumentHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     internal PdfDocumentHandle() : base(true) { }
@@ -27,7 +24,7 @@ public sealed class PdfDocumentHandle : SafeHandleZeroOrMinusOneIsInvalid
     }
 }
 
-/// <summary>PDF 页面安全句柄</summary>
+/// <summary>Safe handle for a PDFium page pointer.</summary>
 public sealed class PdfPageHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     internal PdfPageHandle() : base(true) { }
@@ -47,7 +44,7 @@ public sealed class PdfPageHandle : SafeHandleZeroOrMinusOneIsInvalid
     }
 }
 
-/// <summary>PDF 位图安全句柄</summary>
+/// <summary>Safe handle for a PDFium bitmap pointer.</summary>
 public sealed class PdfBitmapHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     internal PdfBitmapHandle() : base(true) { }
@@ -69,28 +66,28 @@ public sealed class PdfBitmapHandle : SafeHandleZeroOrMinusOneIsInvalid
 
 #endregion
 
-#region
+#region P/Invoke declarations
 
 internal static partial class PdfiumNative
 {
     private const string DllName = "pdfium.dll";
     private const CallingConvention Cdecl = CallingConvention.Cdecl;
 
-    // === 引擎生命周期 ===
+    // Engine lifecycle
     [LibraryImport(DllName, EntryPoint = "FPDF_InitLibrary")]
     public static partial void FPDF_InitLibrary();
 
     [LibraryImport(DllName, EntryPoint = "FPDF_DestroyLibrary")]
     public static partial void FPDF_DestroyLibrary();
 
-    // === 文档操作 ===
+    // Document operations
     [LibraryImport(DllName, EntryPoint = "FPDF_LoadDocument", StringMarshalling = StringMarshalling.Utf8)]
     public static partial IntPtr FPDF_LoadDocument(string file_path, IntPtr password);
 
     [LibraryImport(DllName, EntryPoint = "FPDF_CloseDocument")]
     public static partial void FPDF_CloseDocument(IntPtr document);
 
-    // === 页面操作 ===
+    // Page operations
     [LibraryImport(DllName, EntryPoint = "FPDF_LoadPage")]
     public static partial IntPtr FPDF_LoadPage(IntPtr document, int page_index);
 
@@ -103,7 +100,7 @@ internal static partial class PdfiumNative
     [LibraryImport(DllName, EntryPoint = "FPDF_GetPageHeight")]
     public static partial double FPDF_GetPageHeight(IntPtr page);
 
-    // === 位图与渲染 ===
+    // Bitmap and rendering
     [LibraryImport(DllName, EntryPoint = "FPDFBitmap_CreateEx")]
     public static partial IntPtr FPDFBitmap_CreateEx(int width, int height, int format, IntPtr first_scan, int stride);
 
@@ -122,18 +119,19 @@ internal static partial class PdfiumNative
     [LibraryImport(DllName, EntryPoint = "FPDFBitmap_Destroy")]
     public static partial void FPDFBitmap_Destroy(IntPtr bitmap);
 
-    // 常量定义
     public const int FPDF_BITMAP_BGRA = 4;
-    public const int FPDF_ANNOT = 0x01;       // 渲染注释
-    public const int FPDF_LCD_TEXT = 0x02;    // LCD 文本优化
+    public const int FPDF_ANNOT = 0x01;
+    public const int FPDF_LCD_TEXT = 0x02;
     public const int FPDF_NO_NATIVETEXT = 0x04;
 }
 
 #endregion
 
-#region
+#region Bootstrap
 
-/// <summary>确保 PDFium 只初始化一次，应用退出时自动销毁</summary>
+/// <summary>
+/// Ensures PDFium is initialized exactly once; cleans up on process exit.
+/// </summary>
 public static class PdfiumBootstrap
 {
     private static readonly object _lock = new();

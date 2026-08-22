@@ -1,19 +1,17 @@
 ﻿using LiteView.Contracts;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LiteView.Services
 {
+    /// <summary>
+    /// HTTP client wrapper that handles both arbitrary URLs and Supabase REST endpoints.
+    /// Supabase requests automatically include the apikey header from configuration.
+    /// </summary>
     public class NetworkService : INetworkService
     {
         private readonly HttpClient _httpClient;
@@ -28,29 +26,16 @@ namespace LiteView.Services
             _supabaseBaseUrl = configuration["Supabase:BaseUrl"] ?? "";
         }
 
-        /// <summary>
-        /// 从服务器请求获取字符串数据
-        /// </summary>
-        /// <param name="url">请求地址</param>
-        /// <param name="cancellationToken">取消令牌（用于页面关闭时取消请求）</param>
-        /// <returns>成功返回字符串，失败抛出明确异常</returns>
-        /// <exception cref="HttpRequestException">网络错误或状态码异常</exception>
+        /// <inheritdoc/>
         public async Task<string?> GetStringAsync(string url, CancellationToken cancellationToken = default)
         {
             return await _httpClient.GetStringAsync(url, cancellationToken);
         }
 
-        /// <summary>
-        /// 从 Supabase 数据库请求获取字符串数据
-        /// </summary>
-        /// <param name="endpoint">具体的资源路径</param>
-        /// <param name="cancellationToken">取消令牌</param>
-        /// <returns>成功返回字符串，失败抛出明确异常</returns>
+        /// <inheritdoc/>
         public async Task<string?> GetSupabaseStringAsync(string endpoint, CancellationToken cancellationToken = default)
         {
             var fullUrl = new Uri(new Uri(_supabaseBaseUrl), endpoint).ToString();
-
-            Debug.WriteLine(fullUrl);
 
             using var request = new HttpRequestMessage(HttpMethod.Get, fullUrl);
             request.Headers.Add("apikey", _supabasekey);
@@ -60,19 +45,18 @@ namespace LiteView.Services
             return await response.Content.ReadAsStringAsync(cancellationToken);
         }
 
+        /// <inheritdoc/>
         public async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken = default)
         {
             var json = await _httpClient.GetStringAsync(url, cancellationToken);
 
-
             return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
 
+        /// <inheritdoc/>
         public async Task<T> GetSupabaseDataAsync<T>(string endpoint, CancellationToken cancellationToken = default)
         {
             var fullUrl = new Uri(new Uri(_supabaseBaseUrl), endpoint).ToString();
-
-            Debug.WriteLine(fullUrl);
 
             using var request = new HttpRequestMessage(HttpMethod.Get, fullUrl);
             request.Headers.Add("apikey", _supabasekey);
@@ -83,6 +67,5 @@ namespace LiteView.Services
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
-
     }
 }
