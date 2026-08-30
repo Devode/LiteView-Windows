@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Windows.UI;
@@ -69,6 +70,20 @@ namespace LiteView.Pages
             }
         }
         private Color _penColor = Microsoft.UI.Colors.Red;
+
+        public float StrokeSimplifiedTolerance
+        {
+            get => _strokeSimplifiedTolerance;
+            set
+            {
+                if (value != _strokeSimplifiedTolerance)
+                {
+                    _strokeSimplifiedTolerance = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private float _strokeSimplifiedTolerance = 0.5f;
 
         public SolidColorBrush ToBrush(Color color) => new SolidColorBrush(color);
 
@@ -321,6 +336,12 @@ namespace LiteView.Pages
         private void StrokeThicknessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
             PdfViewer.SetAnnotationThickness(StrokeThickness);
+        }
+
+        private void StrokeSimlifiedThresholdSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            //PdfViewer.
+            Debug.WriteLine(StrokeSimplifiedTolerance);
         }
     }
 }

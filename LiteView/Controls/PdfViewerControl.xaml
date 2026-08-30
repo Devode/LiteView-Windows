@@ -51,7 +51,8 @@
             </Canvas>
             
             <control:AnnotationCanvasControl x:Name="AnnotationCanvas"
-                                             IsHitTestVisible="False" />
+                                             IsHitTestVisible="False"
+                                             SimplifiedTolerance="{x:Bind SimplifiedTolerance, Mode=OneWay}"/>
         </Grid>
 
         

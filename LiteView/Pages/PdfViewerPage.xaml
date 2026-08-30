@@ -79,7 +79,8 @@
     </Page.Resources>
 
     <Grid x:Name="PdfGrid">
-        <control:PdfViewerControl x:Name="PdfViewer" />
+        <control:PdfViewerControl x:Name="PdfViewer"
+                                  SimplifiedTolerance="{x:Bind StrokeSimplifiedTolerance, Mode=OneWay}"/>
 
         <Border VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="20" CornerRadius="20"
                 Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
@@ -205,6 +206,16 @@
                                                 </Flyout>
                                             </SplitButton.Flyout>
                                         </SplitButton>
+                                        <Button Content="更多">
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <StackPanel Spacing="12" MinWidth="200">
+                                                        <Slider Header="笔迹简化容差" Minimum="0" Maximum="16" StepFrequency="0.1" Value="{x:Bind StrokeSimplifiedTolerance, Mode=TwoWay}" MinWidth="100"
+                                                                VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
                                     </StackPanel>
                                 </Flyout>
                             </Button.Flyout>

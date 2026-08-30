@@ -1,10 +1,10 @@
 using LiteView.Helpers;
 using LiteView.Models;
 using Microsoft.Graphics.Canvas.Geometry;
+using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
-using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
@@ -12,7 +12,9 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Windows.Foundation;
 using Windows.UI;
 
@@ -23,7 +25,7 @@ namespace LiteView.Controls
     /// Strokes are stored as <see cref="Stroke"/> records and rendered as
     /// XAML Path elements with Bezier-smoothed geometry.
     /// </summary>
-    public sealed partial class AnnotationCanvasControl : UserControl
+    public sealed partial class AnnotationCanvasControl : UserControl, INotifyPropertyChanged
     {
         private Color _currentPenColor = Microsoft.UI.Colors.Red;
         private double _currentStrokeThickness = 1.0;
@@ -33,6 +35,19 @@ namespace LiteView.Controls
         private Microsoft.UI.Xaml.Shapes.Path _currentDrawingPath;
 
         public bool IsEraser = false;
+
+        public float SimplifiedTolerance
+        {
+            get => (float)GetValue(SimplifiedToleranceProperty);
+            set => SetValue(SimplifiedToleranceProperty, value);
+        }
+        public static readonly DependencyProperty SimplifiedToleranceProperty = DependencyProperty.Register(
+            "SimplifiedThreshold", typeof(float), typeof(AnnotationCanvasControl), new PropertyMetadata(null));
+
+       
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         public AnnotationCanvasControl()
         {
@@ -175,7 +190,7 @@ namespace LiteView.Controls
         {
             if (stroke.Points.Count < 2) return null;
 
-            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 0.5f);
+            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, SimplifiedTolerance); // At first, SimplifiedThreshold is 0.5.
             var figure = GenerateBezierPathFigure(simplifiedPoints);
 
             int count = _strokes.Count;
@@ -196,7 +211,7 @@ namespace LiteView.Controls
         {
             if (stroke.Points.Count < 2) return null;
 
-            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, 0.5f);
+            List<Vector2> simplifiedPoints = StrokeHelper.DouglasPeucker(stroke.Points, SimplifiedTolerance); // At first, SimplifiedThreshold is 0.5.
             return GenerateBezierPathFigure(simplifiedPoints);
         }
 

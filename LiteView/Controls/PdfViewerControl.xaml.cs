@@ -123,6 +123,19 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     public static readonly DependencyProperty ViewerOffsetProperty =
         DependencyProperty.Register("ViewerOffset", typeof(Windows.Foundation.Point), typeof(PdfViewerControl), new PropertyMetadata(new Windows.Foundation.Point(0, 0)));
 
+    /// <summary>The simplified tolerance of AnnotationCanvasControl.</summary>
+    public float SimplifiedTolerance
+    {
+        get => (float)GetValue(SimplifiedToleranceProperty);
+        set
+        {
+            SetValue(SimplifiedToleranceProperty, value);
+            Debug.WriteLine(SimplifiedTolerance);
+        }
+    }
+    public static readonly DependencyProperty SimplifiedToleranceProperty = DependencyProperty.Register(
+        "SimplifiedThreshold", typeof(float), typeof(AnnotationCanvasControl), new PropertyMetadata(null));
+
     public PdfViewerControl()
     {
         InitializeComponent();
