@@ -1,44 +1,25 @@
-using CommunityToolkit.WinUI;
 using LiteView.Controls;
 using LiteView.Helpers;
 using LiteView.Models;
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading;
-using System.Threading.Tasks;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-using Windows.Storage;
-using Windows.Storage.Streams;
 using Windows.UI;
-using WinRT.Interop;
-using static System.Net.Mime.MediaTypeNames;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace LiteView.Pages
 {
     /// <summary>
-    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// PDF viewer page. Hosts a <see cref="PdfViewerControl"/> and provides toolbar
+    /// buttons for navigation, zoom, annotation tools (pen/eraser/select), and
+    /// full-screen toggle. Tracks pen color and stroke thickness via bindable properties.
     /// </summary>
     public sealed partial class PdfViewerPage : Page, INotifyPropertyChanged
     {
@@ -54,8 +35,12 @@ namespace LiteView.Pages
                 }
             }
         }
+        // 14.0 is the toolbar's default zoom display value (percentage-like, not DPI).
         private double _buttonZoom = 14.0;
 
+        // Multiplier to convert ButtonZoom into a pixel-based UI scale.
+        // 3.5 is a magic number tuned by trial — 14.0 * 3.5 ≈ 49px toolbar item width.
+        // If ButtonZoom semantics change, this multiplier must be retuned.
         public double AplyButtonZoom(double buttonZoom) => buttonZoom * 3.5;
 
         public double StrokeThickness
@@ -86,6 +71,20 @@ namespace LiteView.Pages
         }
         private Color _penColor = Microsoft.UI.Colors.Red;
 
+        public float StrokeSimplifiedTolerance
+        {
+            get => _strokeSimplifiedTolerance;
+            set
+            {
+                if (value != _strokeSimplifiedTolerance)
+                {
+                    _strokeSimplifiedTolerance = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private float _strokeSimplifiedTolerance = 0.5f;
+
         public SolidColorBrush ToBrush(Color color) => new SolidColorBrush(color);
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -94,15 +93,15 @@ namespace LiteView.Pages
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-
         public PdfViewerPage()
         {
             InitializeComponent();
 
             PdfViewer.PropertyChanged += PdfViewer_PropertyChanged;
+            Unloaded += (s, e) => PdfViewer.PropertyChanged -= PdfViewer_PropertyChanged;
         }
 
-        private void PdfViewer_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void PdfViewer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (sender is PdfViewerControl pdfViewerControl)
             {
@@ -119,7 +118,6 @@ namespace LiteView.Pages
             
             if (navView != null)
             {
-                // 遍历 MenuItems 找到对应类型的 Item
                 foreach (var item in navView.MenuItems)
                 {
                     if (item is NavigationViewItem navItem && navItem.Tag?.ToString() == this.GetType().Name)
@@ -132,32 +130,30 @@ namespace LiteView.Pages
 
             if (e.Parameter is PdfItem pdfItem)
             {
-                // 检查文件是否存在，如果不存在则不加载 PDF 并显示错误提示
                 if (pdfItem == null || File.Exists(pdfItem.FilePath) == false)
                 {
                     return;
                 }
 
                 PdfViewer.PdfPath = pdfItem.FilePath;
-
-                //AnnotationCanvas.BindToScrollViewer(PdfViewer);
-                //if(PdfViewer.PageCount != 0) PageCounts.Text = $"1/{PdfViewer.PageCount}";
             }
         }
 
-        //private async Task LoadPdf(string filePath)
-        //{
-        //    var file = StorageFile.GetFileFromPathAsync(filePath);
-        //    var pdfDoc = await Windows.Data.Pdf.PdfDocument.LoadFromFileAsync((IStorageFile)file);
-        //}
-
+        /// <summary>
+        /// Handle toggle button clicks for the annotation tool bar.
+        /// Ensures mutual exclusion: only one tool (Select, Pen, Eraser) can be active.
+        ///
+        /// The toggle logic has a subtle double-path: if the user clicks an already-checked
+        /// button, IsChecked becomes false (WPF/WinUI ToggleButton default), so we immediately
+        /// re-check it — effectively making tools "sticky" (click twice to deselect).
+        /// This is intentional: Select mode is the default, so deselecting a tool snaps back
+        /// to Select via the UncheckOthers + UpdateToolState path. However, note that clicking
+        /// the already-active Select button also re-enters Select mode (a no-op, but redundant).
+        /// </summary>
         private void ToolButton_Click(object sender, RoutedEventArgs e)
         {
-            // 获取当前被点击的按钮
             if (sender is ToggleButton clickedButton)
             {
-                // 如果用户点击了已经选中的按钮，通常不需要做任何事（保持选中）
-                // 如果希望点击已选中的按钮能取消选中（即允许全不选），则注释掉下面的判断
                 if (clickedButton.IsChecked == true)
                 {
                     UncheckOthers(clickedButton);
@@ -165,7 +161,6 @@ namespace LiteView.Pages
                 }
                 else
                 {
-                    // 可选：如果点击未选中的，先选中它，再取消其他的
                     clickedButton.IsChecked = true;
                     UncheckOthers(clickedButton);
                     UpdateToolState(clickedButton.Name);
@@ -174,9 +169,8 @@ namespace LiteView.Pages
         }
 
         /// <summary>
-        /// 取消其他工具按钮的选中状态，确保只有当前按钮被选中
+        /// Deselect all other tool buttons, ensuring only the current one is selected.
         /// </summary>
-        /// <param name="currentButton"></param>
         private void UncheckOthers(ToggleButton currentButton)
         {
             var tools = new[] { BtnSelect, BtnPen, BtnEraser };
@@ -190,19 +184,20 @@ namespace LiteView.Pages
             }
         }
 
-        // 业务逻辑处理
+        /// <summary>
+        /// Apply the selected tool's state to the PdfViewerControl:
+        /// Select mode disables annotations and enables scrolling;
+        /// Pen/Eraser modes enable annotations and disable scrolling.
+        /// </summary>
         private void UpdateToolState(string toolName)
         {
             switch (toolName)
             {
                 case "BtnSelect":
-                    System.Diagnostics.Debug.WriteLine("切换到：选择模式");
-                    //PdfViewer.GetAnnotationCanvas().IsHitTestVisible = false;
                     PdfViewer.AllowAnnotate(false);
                     PdfViewer.SetScrollingEnabled(true);
                     break;
                 case "BtnPen":
-                    System.Diagnostics.Debug.WriteLine("切换到：画笔模式");
                     PdfViewer.AllowAnnotate(true);
                     PdfViewer.SetAnnotationEraseMode(false);
                     PdfViewer.SetScrollingEnabled(false);
@@ -211,7 +206,6 @@ namespace LiteView.Pages
                     PdfViewer.AllowAnnotate(true);
                     PdfViewer.SetAnnotationEraseMode(true);
                     PdfViewer.SetScrollingEnabled(false);
-                    System.Diagnostics.Debug.WriteLine("切换到：橡皮擦模式");
                     break;
             }
         }
@@ -246,12 +240,16 @@ namespace LiteView.Pages
             PdfViewer.ClearAnnotations();
         }
 
+        /// <summary>
+        /// Show a page-jump dialog with input validation (numeric format + range check).
+        /// The dialog stays open with an error message until valid input is provided.
+        /// </summary>
         private async void PageBtn_Click(object sender, RoutedEventArgs e)
         {
             TextBox inputBox = new TextBox
             {
-                PlaceholderText = "输入页码",
-                Header = "跳转到页码"
+                PlaceholderText = "Enter page number",
+                Header = "Jump to page"
             };
 
             TextBlock errorTip = new TextBlock
@@ -267,10 +265,10 @@ namespace LiteView.Pages
 
             ContentDialog dialog = new ContentDialog
             {
-                Title = "跳转到页码",
+                Title = "Jump to page",
                 Content = panel,
-                PrimaryButtonText = "确定",
-                CloseButtonText = "取消",
+                PrimaryButtonText = "OK",
+                CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Primary
             };
 
@@ -281,7 +279,7 @@ namespace LiteView.Pages
                 {
                     args.Cancel = true;
 
-                    errorTip.Text = "格式错误，请输入有效数字";
+                    errorTip.Text = "Invalid format, please enter a valid number";
                     errorTip.Visibility = Visibility.Visible;
 
                     inputBox.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
@@ -290,7 +288,7 @@ namespace LiteView.Pages
                 {
                     args.Cancel = true;
 
-                    errorTip.Text = "页码无效，请输入有效页码";
+                    errorTip.Text = "Invalid page number";
                     errorTip.Visibility = Visibility.Visible;
 
                     inputBox.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
@@ -315,18 +313,16 @@ namespace LiteView.Pages
 
             var tag = optionFullScreen.Tag.ToString();
 
-            //var currentWindow = Window.Current;
-
             if (tag == "EnterFullScreen")
             {
                 WindowHelper.SetFullScreen(App.MainWindowInstance, true);
-                optionFullScreen.Text = "退出全屏";
+                optionFullScreen.Text = "Exit Full Screen";
                 optionFullScreen.Tag = "ExitFullScreen";
             }
             else
             {
                 WindowHelper.SetFullScreen(App.MainWindowInstance, false);
-                optionFullScreen.Text = "进入全屏";
+                optionFullScreen.Text = "Enter Full Screen";
                 optionFullScreen.Tag = "EnterFullScreen";
             }
         }
@@ -340,6 +336,12 @@ namespace LiteView.Pages
         private void StrokeThicknessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
             PdfViewer.SetAnnotationThickness(StrokeThickness);
+        }
+
+        private void StrokeSimlifiedThresholdSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            //PdfViewer.
+            Debug.WriteLine(StrokeSimplifiedTolerance);
         }
     }
 }

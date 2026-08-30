@@ -1,95 +1,165 @@
-﻿using LiteView.Helpers;
+﻿using LiteView.Contracts;
+using LiteView.Helpers;
 using LiteView.Services;
+using LiteView.ViewModels;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading.Tasks;
-using Windows.ApplicationModel;
+using System.Net.Http;
+using System.Diagnostics;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Storage;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+using LiteView.Pages;
+using Microsoft.Windows.AppLifecycle;
+using System.Linq;
+using LiteView.Models;
 
 namespace LiteView
 {
     /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
+    /// Application entry point. Builds the DI host, registers all services and ViewModels,
+    /// loads configuration, restores persisted theme, and activates the main window.
     /// </summary>
     public partial class App : Application
     {
-
         private Window? _window;
 
+        /// <summary>
+        /// Singleton reference to the main window, accessible from Pages/Controls via service locator.
+        ///
+        /// NOTE: There is also MainWindow.current — a static field inside MainWindow itself.
+        /// This App.MainWindowInstance is set once during startup (before window.Activate()),
+        /// while MainWindow.current is set inside MainWindow.Loaded. Both exist to support
+        /// different access patterns; if one is ever null, the other should be tried.
+        /// </summary>
         public static MainWindow MainWindowInstance { get; private set; }
+
+        /// <summary>The DI host. Exposed as a static service locator for code-behind that cannot use constructor injection.</summary>
+        public static IHost? Host { get; private set; }
+
         public const int VERSION_CODE = 0;
 
-        public PdfDataService PdfService { get; } = new PdfDataService();
+        /// <summary>Path to the app's local data folder (roaming-safe).</summary>
         public string LocalFolderPath;
+
+        /// <summary>Full path to the persisted PDF list JSON file.</summary>
         public string PdfDataFilePath;
 
         public static App CurrentApp => (App)Current;
 
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
+        public static IPdfDataService PdfService => Host!.Services.GetRequiredService<IPdfDataService>();
+
         public App()
         {
-            //Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = "en-US";
             InitializeComponent();
         }
 
-        /// <summary>
-        /// Invoked when the application is launched.
-        /// </summary>
-        /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            Init();            
+            Init();
         }
 
-        private async void Init()
+        /// <summary>
+        /// Synchronous initialization: build the DI host, load PDF data in the background,
+        /// restore the persisted theme, and activate the main window.
+        /// Kept synchronous to avoid async void deadlocks during startup.
+        /// </summary>
+        private void Init()
         {
-            LoadData();
+            AppActivationArguments appActivationArguments =
+                AppInstance.GetCurrent().GetActivatedEventArgs();
+
+            Host = Microsoft.Extensions.Hosting.Host
+                .CreateDefaultBuilder()
+                .ConfigureAppConfiguration((context, config) =>
+                {
+                    config.Sources.Clear();
+                    var baseDir = Path.GetDirectoryName(AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
+                    config.AddJsonFile(Path.Combine(baseDir, "appsettings.json"), optional: false, reloadOnChange: false);
+                })
+                .ConfigureServices((context, services) =>
+                {
+                    services.AddSingleton<HttpClient>(sp => new HttpClient());
+
+                    // Services
+                    services.AddSingleton<IPdfDataService, PdfDataService>();
+                    services.AddSingleton<INetworkService, NetworkService>();
+                    services.AddSingleton<IUpdateService, UpdateService>();
+                    services.AddSingleton<IMessageDialogService, MessageDialogService>();
+                    services.AddSingleton<INavigationService, NavigationService>();
+                    services.AddSingleton<IFilePickerService, FilePickerService>();
+
+                    // ViewModels
+                    services.AddTransient<MainViewModel>();
+                    services.AddTransient<PdfListViewModel>();
+                    services.AddTransient<SettingsViewModel>();
+
+                    // Pages
+                    services.AddTransient<PdfListPage>();
+                    services.AddTransient<SettingsPage>();
+
+                    services.AddSingleton<MainWindow>();
+                })
+                .Build();
+
+            Host.Start();
+
+            var pdfService = Host.Services.GetRequiredService<IPdfDataService>();
+
+            LocalFolderPath = ApplicationData.Current.LocalFolder.Path;
+            PdfDataFilePath = System.IO.Path.Combine(LocalFolderPath, "pdf_list_data.json");
+
+            // Fire-and-forget: LoadPdfDataAsync reads the local JSON file and populates pdfService.PdfList.
+            // The window activates below and may render the PDF list before this completes.
+            // PdfDataService.IsLoading prevents double-load; PdfListViewModel.EmptyVisibility
+            // handles the transient empty state. If the JSON is malformed, this is an
+            // unobserved Task exception (same limitation as OnPdfPathChanged).
+            _ = pdfService.LoadPdfDataAsync(PdfDataFilePath);
 
             var localSettings = ApplicationData.Current.LocalSettings;
-            ElementTheme themeToApply = ElementTheme.Default; // 默认值，初始化将要应用的主题
+            ElementTheme themeToApply = ElementTheme.Default;
 
             if (localSettings.Values.ContainsKey("AppTheme"))
             {
                 var savedTheme = localSettings.Values["AppTheme"].ToString();
-                System.Diagnostics.Debug.WriteLine(savedTheme);
                 Enum.TryParse(savedTheme, out themeToApply);
             }
 
-            _window = new MainWindow();
-
-            ThemeHelper.RootTheme = themeToApply;
+            _window = Host.Services.GetRequiredService<MainWindow>();
 
             MainWindowInstance = (MainWindow)_window;
 
+            ThemeHelper.RootTheme = themeToApply;
+
             _window.Activate();
+
+            var navFrame = (_window as MainWindow)?.GetNavFrame();
+
+            if (appActivationArguments.Kind == ExtendedActivationKind.File)
+            {
+                var fileActivatedEventArgs = appActivationArguments.Data as IFileActivatedEventArgs;
+
+                if (fileActivatedEventArgs?.Files.FirstOrDefault() is IStorageFile file)
+                {
+                    string filePath = file.Path;
+
+                    Debug.WriteLine(filePath);
+                    Debug.WriteLine(navFrame is null);
+                    navFrame?.Navigate(
+                        typeof(PdfViewerPage), 
+                        new PdfItem{
+                            FilePath = filePath,
+                        });
+                }
+            }
         }
 
-        private async void LoadData()
+        public static T GetService<T>() where T : class
         {
-            LocalFolderPath = ApplicationData.Current.LocalFolder.Path;
-            PdfDataFilePath = System.IO.Path.Combine(LocalFolderPath, "pdf_list_data.json");
-
-            await PdfService.LoadPdfDataAsync(PdfDataFilePath);
+            return Host!.Services.GetRequiredService<T>();
         }
     }
 }

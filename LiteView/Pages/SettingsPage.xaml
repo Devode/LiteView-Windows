@@ -26,13 +26,14 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         
         <!-- 标题 -->
         <TextBlock x:Uid="Settings"
             x:Name="PageHeader"
             MaxWidth="1064"
-            Margin="36,24,36,0"
+            Margin="36,40,36,0"
             AutomationProperties.HeadingLevel="Level1"
             Style="{StaticResource TitleTextBlockStyle}" />
         
@@ -42,7 +43,9 @@
             Padding="36,0,36,0"
             VerticalScrollBarVisibility="Auto"
             VerticalScrollMode="Auto">
-            <StackPanel MaxWidth="1024" Spacing="{StaticResource SettingsCardSpacing}">
+            <StackPanel Orientation="Vertical"
+                        MaxWidth="1024"
+                        Spacing="{StaticResource SettingsCardSpacing}">
                 <StackPanel.ChildrenTransitions>
                     <TransitionCollection>
                         <RepositionThemeTransition />
@@ -51,15 +54,56 @@
                 <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" x:Uid="Appearance"/>
                 <controls:SettingsCard x:Uid="Theme">
                     <ComboBox x:Name="themeMode" 
-                              SelectedIndex="0" 
                               MinWidth="200"
-                              SelectionChangedTrigger="Committed">
+                              SelectionChangedTrigger="Committed"
+                              SelectionChanged="themeMode_SelectionChanged"
+                              SelectedIndex="{x:Bind ViewModel.ThemeMode, Mode=TwoWay}">
                         <ComboBoxItem x:Uid="ThemeUsingSystemSetting" Tag="Default" />
                         <ComboBoxItem x:Uid="ThemeLight" Tag="Light" />
                         <ComboBoxItem x:Uid="ThemeDark" Tag="Dark" />
                     </ComboBox>
                 </controls:SettingsCard>
+
+                <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" x:Uid="About" />
+                <controls:SettingsExpander Description="© 2026 Devode."
+                                           Header="LiteView">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Uid="CheckForUpdate" VerticalAlignment="Center" Command="{x:Bind ViewModel.CheckUpdateCommand}"/>
+
+                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{x:Bind ViewModel.CurrentVersion, Mode=OneWay}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <controls:SettingsExpander.HeaderIcon>
+                        <ImageIcon Source="/Assets/Icons/LiteViewIcon.ico" />
+                    </controls:SettingsExpander.HeaderIcon>
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard x:Uid="Repository">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/Devode/LiteView-Windows" />
+                                <HyperlinkButton Content="Gitee" NavigateUri="https://gitee.com/devode/LiteView-Windows" />
+                            </StackPanel>
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                
             </StackPanel>
         </ScrollView>
+        <StackPanel Grid.Row="2"
+                    Margin="36,0,36,2"
+                    Spacing="8">
+            <InfoBar
+                x:Uid="NoUpdate"
+                IsOpen="{x:Bind ViewModel.IsNoUpdateInfoOpen, Mode=TwoWay}"
+                Severity="Informational" />
+            <InfoBar
+                x:Uid="NetworkError"
+                IsOpen="{x:Bind ViewModel.IsNetworkErrorInfoOpen, Mode=TwoWay}"
+                Message="{x:Bind ViewModel.NetworkErrorInfo, Mode=OneWay}"
+                Severity="Error" />
+        </StackPanel>
     </Grid>
 </Page>

@@ -25,6 +25,8 @@
             x:Name="titleBar"
             Title="LiteView"
             IsPaneToggleButtonVisible="True"
+            IsBackButtonVisible="{x:Bind ViewModel.IsBackButtonVisible, Mode=OneWay}"
+            BackRequested="titleBar_BackRequested"
             PaneToggleRequested="titleBar_PaneToggleRequested">
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="/Assets/Icons/LiteViewIcon.ico" />
@@ -36,7 +38,8 @@
                                 CornerRadius="8"
                                 PlaceholderText="搜索"
                                 QueryIcon="Find"
-                                TextChanged="SearchBox_TextChanged"/>
+                                Text="{x:Bind ViewModel.SearchText, Mode=TwoWay}"
+                                ItemsSource="{x:Bind ViewModel.SuggestionItems, Mode=OneWay}"/>
             </TitleBar.Content>
         </TitleBar>
 
@@ -45,6 +48,7 @@
             Grid.Row="1"
             PaneDisplayMode="LeftMinimal"
             IsBackButtonVisible="Collapsed"
+            IsPaneOpen="{x:Bind ViewModel.IsPaneOpen, Mode=TwoWay}"
             IsPaneToggleButtonVisible="False"
             SelectionChanged="navView_SelectionChanged">
             <NavigationView.MenuItems>
