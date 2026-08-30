@@ -46,9 +46,9 @@ namespace LiteView.Services
         }
 
         /// <inheritdoc/>
-        public void NavigateToSettings()
+        public void NavigateToSettings(object parameter = null)
         {
-            _frame?.Navigate(typeof(SettingsPage));
+            _frame?.Navigate(typeof(SettingsPage), parameter);
             Navigated.Invoke(this, new NavigatedEventArgs(CanGoBack));
         }
     }

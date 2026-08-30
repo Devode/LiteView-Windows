@@ -10,8 +10,12 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Diagnostics;
-using Windows.ApplicationModel;
+using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using LiteView.Pages;
+using Microsoft.Windows.AppLifecycle;
+using System.Linq;
+using LiteView.Models;
 
 namespace LiteView
 {
@@ -65,6 +69,9 @@ namespace LiteView
         /// </summary>
         private void Init()
         {
+            AppActivationArguments appActivationArguments =
+                AppInstance.GetCurrent().GetActivatedEventArgs();
+
             Host = Microsoft.Extensions.Hosting.Host
                 .CreateDefaultBuilder()
                 .ConfigureAppConfiguration((context, config) =>
@@ -77,6 +84,7 @@ namespace LiteView
                 {
                     services.AddSingleton<HttpClient>(sp => new HttpClient());
 
+                    // Services
                     services.AddSingleton<IPdfDataService, PdfDataService>();
                     services.AddSingleton<INetworkService, NetworkService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
@@ -84,8 +92,14 @@ namespace LiteView
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IFilePickerService, FilePickerService>();
 
+                    // ViewModels
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<PdfListViewModel>();
+                    services.AddTransient<SettingsViewModel>();
+
+                    // Pages
+                    services.AddTransient<PdfListPage>();
+                    services.AddTransient<SettingsPage>();
 
                     services.AddSingleton<MainWindow>();
                 })
@@ -121,6 +135,31 @@ namespace LiteView
             ThemeHelper.RootTheme = themeToApply;
 
             _window.Activate();
+
+            var navFrame = (_window as MainWindow)?.GetNavFrame();
+
+            if (appActivationArguments.Kind == ExtendedActivationKind.File)
+            {
+                var fileActivatedEventArgs = appActivationArguments.Data as IFileActivatedEventArgs;
+
+                if (fileActivatedEventArgs?.Files.FirstOrDefault() is IStorageFile file)
+                {
+                    string filePath = file.Path;
+
+                    Debug.WriteLine(filePath);
+                    Debug.WriteLine(navFrame is null);
+                    navFrame?.Navigate(
+                        typeof(PdfViewerPage), 
+                        new PdfItem{
+                            FilePath = filePath,
+                        });
+                }
+            }
+        }
+
+        public static T GetService<T>() where T : class
+        {
+            return Host!.Services.GetRequiredService<T>();
         }
     }
 }

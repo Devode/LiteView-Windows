@@ -23,9 +23,6 @@
 	<PackageCertificateThumbprint>A87A89CC3E879094107D4D00FCFB8C17DA868ED7</PackageCertificateThumbprint>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="Assets\Icons\LiteViewIcon.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -64,6 +61,7 @@
     <None Remove="Controls\AnnotationCanvasControl.xaml" />
     <None Remove="Controls\PdfListItemControl.xaml" />
     <None Remove="Controls\PdfViewerControl.xaml" />
+    <None Remove="LiteViewIcon.png" />
     <None Remove="Pages\PdfListPage.xaml" />
     <None Remove="Pages\SettingsPage.xaml" />
   </ItemGroup>
@@ -128,6 +126,9 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Extensions\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="LiteViewIcon.png" />
   </ItemGroup>
   <ItemGroup>
     <Page Update="Controls\AnnotationCanvasControl.xaml">

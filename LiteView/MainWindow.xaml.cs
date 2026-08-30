@@ -53,6 +53,8 @@ namespace LiteView
             return navView;
         }
 
+        public Frame GetNavFrame() => navFrame;
+
         private void titleBar_BackRequested(TitleBar sender, object args)
             => ViewModel.GoBackCommand.Execute(null);
 

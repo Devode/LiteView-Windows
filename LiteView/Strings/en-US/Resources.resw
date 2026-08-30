@@ -144,4 +144,25 @@
   <data name="FilePath.Text" xml:space="preserve">
     <value>Path: </value>
   </data>
+  <data name="About.Text" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Repository.Header" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="CheckForUpdate.Content" xml:space="preserve">
+    <value>Check for update</value>
+  </data>
+  <data name="NoUpdate.Title" xml:space="preserve">
+    <value>No Update</value>
+  </data>
+  <data name="NoUpdate.Message" xml:space="preserve">
+    <value>No update. You are already using the latest version.</value>
+  </data>
+  <data name="NetworkError.Title" xml:space="preserve">
+    <value>Network Error</value>
+  </data>
+  <data name="NetworkErrorInfo" xml:space="preserve">
+    <value>Network error: "{0}".</value>
+  </data>
 </root>

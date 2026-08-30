@@ -153,4 +153,32 @@
     <value>文件路径：</value>
     <comment>PDF 列表项目文件路径</comment>
   </data>
+  <data name="About.Text" xml:space="preserve">
+    <value>关于</value>
+    <comment>关于</comment>
+  </data>
+  <data name="Repository.Header" xml:space="preserve">
+    <value>仓库</value>
+    <comment>设置中的仓库链接</comment>
+  </data>
+  <data name="CheckForUpdate.Content" xml:space="preserve">
+    <value>检查更新</value>
+    <comment>检查更新按钮内容</comment>
+  </data>
+  <data name="NoUpdate.Title" xml:space="preserve">
+    <value>暂无更新</value>
+    <comment>设置中手动检查更新无更新提示标题</comment>
+  </data>
+  <data name="NoUpdate.Message" xml:space="preserve">
+    <value>暂无更新，你已经在使用最新版本。</value>
+    <comment>无更新提示信息</comment>
+  </data>
+  <data name="NetworkError.Title" xml:space="preserve">
+    <value>网络异常</value>
+    <comment>网络异常提示标题</comment>
+  </data>
+  <data name="NetworkErrorInfo" xml:space="preserve">
+    <value>网络出现异常：“{0}”。</value>
+    <comment>网络异常提示信息</comment>
+  </data>
 </root>

@@ -38,6 +38,6 @@ namespace LiteView.Contracts
         /// <summary>
         /// Navigate to the dedicated settings page.
         /// </summary>
-        void NavigateToSettings();
+        void NavigateToSettings(object parameter = null);
     }
 }
