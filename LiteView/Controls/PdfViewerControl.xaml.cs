@@ -19,6 +19,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Windows.Foundation;
 
 namespace LiteView.Controls;
@@ -85,6 +86,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// trades off-screen render quality for fast scroll performance.
     /// </summary>
     private const double BASIC_DPI = 300;
+
+    private const double MAX_DPI = 1000;
 
     /// <summary>Debounce delay in milliseconds before triggering a scroll-driven load.</summary>
     private const int LOAD_DEBOUNCE_MS = 100;
@@ -407,6 +410,10 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// </summary>
     private async Task LoadPagesAsync(int startIndex, int endIndex, double zoom)
     {
+        // Target dpi for RenderPartialForSpecificPage
+        double targetDpi = Math.Min(GetDeviceDpi(PdfScrollViewer) * zoom, MAX_DPI);
+        Debug.WriteLine(targetDpi);
+
         for (int i = startIndex; i <= endIndex; i++)
         {
             int pageIndex = i;
@@ -416,7 +423,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
             try
             {
-                var bitmap = await RenderBitmap(pageIndex, BASIC_DPI, 1);
+                var bitmap = await RenderBitmap(pageIndex, targetDpi / 2f);
                 PdfPages[pageIndex].PageImage = bitmap;
                 PdfPages[pageIndex].IsLoading = false;
             }
@@ -430,8 +437,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         int topPageIndex = FindPageByPosition(PdfScrollViewer.VerticalOffset / zoom);
         int bottomPageIndex = FindPageByPosition((PdfScrollViewer.VerticalOffset + PdfScrollViewer.ViewportHeight) / zoom);
 
-        await RenderPartialForSpecificPage(topPageIndex, zoom, ParticalImageTop);
-        if (bottomPageIndex != topPageIndex) await RenderPartialForSpecificPage(bottomPageIndex, zoom, ParticalImageBottom);
+        await RenderPartialForSpecificPage(topPageIndex, zoom, targetDpi, ParticalImageTop);
+        if (bottomPageIndex != topPageIndex) await RenderPartialForSpecificPage(bottomPageIndex, zoom, targetDpi, ParticalImageBottom);
         else ParticalImageBottom.Visibility = Visibility.Collapsed;
     }
 
@@ -439,13 +446,9 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// Rasterize a single page at the given DPI and return the assembled WriteableBitmap.
     /// Uses native PDFium via PdfRenderer.RenderFullPage.
     /// </summary>
-    private async Task<WriteableBitmap> RenderBitmap(int pageIndex, double dpi, double zoom)
+    private async Task<WriteableBitmap> RenderBitmap(int pageIndex, double dpi)
     {
-        var size = _pdfDocument.PageSizes[pageIndex];
-        int renderWidth = (int)(size.Width * zoom);
-        int renderHeight = (int)(size.Height * zoom);
-
-        var rawBitmapData = Native.PdfRenderer.RenderFullPage(PdfPath, pageIndex, renderWidth, renderHeight, dpi);
+        var rawBitmapData = Native.PdfRenderer.RenderFullPage(PdfPath, pageIndex, dpi);
         var bitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
 
         return bitmap;
@@ -457,7 +460,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// with the page bounds, ensuring we only rasterize what the user can actually see.
     /// The result is positioned as an overlay image on top of the base full-page bitmap.
     /// </summary>
-    private async Task RenderPartialForSpecificPage(int pageIndex, double zoom, Microsoft.UI.Xaml.Controls.Image targetImage)
+    private async Task RenderPartialForSpecificPage(int pageIndex, double zoom, double dpi, Microsoft.UI.Xaml.Controls.Image targetImage)
     {
         if (pageIndex < 0 || pageIndex >= PdfPages.Count)
         {
@@ -508,9 +511,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
             visibleRectInPage.Height
         );
 
-        double targetDpi = 96.0 * zoom;
         string currentFilePath = PdfPath;
-        var rawBitmapData = await Task.Run(() => Native.PdfRenderer.RenderRegion(currentFilePath, pageIndex, renderRect, targetDpi));
+        var rawBitmapData = await Task.Run(() => Native.PdfRenderer.RenderRegion(currentFilePath, pageIndex, renderRect, dpi));
 
         if (PdfPagesRepeater.TryGetElement(pageIndex) == null || rawBitmapData.Pixels == null || rawBitmapData.Pixels.Length == 0)
         {
@@ -597,5 +599,12 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         if (left >= PdfPages.Count) return PdfPages.Count - 1;
 
         return -1;
+    }
+
+    private float GetDeviceDpi(UIElement element)
+    {
+        if (element.XamlRoot == null) return 96f;
+
+        return 96f * (float)element.XamlRoot.RasterizationScale;
     }
 }
