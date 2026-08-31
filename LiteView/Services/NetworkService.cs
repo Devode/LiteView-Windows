@@ -1,8 +1,10 @@
 ﻿using LiteView.Contracts;
+using LiteView.Models;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,15 +48,15 @@ namespace LiteView.Services
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken = default)
+        public async Task<T> GetAsync<T>(string url, JsonTypeInfo<T> jsonTypeInfo, CancellationToken cancellationToken = default)
         {
             var json = await _httpClient.GetStringAsync(url, cancellationToken);
 
-            return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+            return JsonSerializer.Deserialize<T>(json, jsonTypeInfo)!;
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetSupabaseDataAsync<T>(string endpoint, CancellationToken cancellationToken = default)
+        public async Task<T> GetSupabaseDataAsync<T>(string endpoint, JsonTypeInfo<T> jsonTypeInfo, CancellationToken cancellationToken = default)
         {
             var fullUrl = new Uri(new Uri(_supabaseBaseUrl), endpoint).ToString();
 
@@ -65,7 +67,7 @@ namespace LiteView.Services
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+            return JsonSerializer.Deserialize<T>(json, jsonTypeInfo)!;
         }
     }
 }

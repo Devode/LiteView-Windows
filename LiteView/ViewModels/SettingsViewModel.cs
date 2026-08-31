@@ -138,7 +138,7 @@ namespace LiteView.ViewModels
                     // The returned array ordering depends on database row order (no explicit ORDER BY).
                     // downloadUrls[0] is assumed to be the correct URL; if multiple rows exist,
                     // the first one returned wins — this is fragile and should be parameterized.
-                    var downloadUrls = await _networkService.GetSupabaseDataAsync<DownloadUrl[]>("download_url?version_id=eq.2");
+                    var downloadUrls = await _networkService.GetSupabaseDataAsync("download_url?version_id=eq.2", AppJsonContext.Default.DownloadUrlArray);
 
                     if (result == Contracts.DialogResult.Primary
                         && downloadUrls != null

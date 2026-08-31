@@ -27,7 +27,7 @@ namespace LiteView.Services
             // guaranteed — FirstOrDefault returns whichever row the API returns first.
             // If multiple version rows exist, this may not be the latest one.
             // A proper solution would add ORDER BY version DESC to the Supabase query.
-            var versions = await _networkService.GetSupabaseDataAsync<RemoteVersion[]>("versions?software_id=eq.2");
+            var versions = await _networkService.GetSupabaseDataAsync("versions?software_id=eq.2", AppJsonContext.Default.RemoteVersionArray);
             var remoteVersion = versions?.FirstOrDefault();
 
             if (remoteVersion == null) return null;
