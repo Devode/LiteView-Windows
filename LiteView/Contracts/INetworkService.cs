@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,12 +25,12 @@ namespace LiteView.Contracts
         /// <summary>
         /// Fetch and deserialize JSON from an absolute URL into <typeparamref name="T"/>.
         /// </summary>
-        Task<T> GetAsync<T>(string url, CancellationToken cancellationToken = default);
+        Task<T> GetAsync<T>(string url, JsonTypeInfo<T> jsonTypeInfo, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Fetch and deserialize JSON from a Supabase REST endpoint into <typeparamref name="T"/>.
         /// The apikey header is added automatically.
         /// </summary>
-        Task<T> GetSupabaseDataAsync<T>(string endpoint, CancellationToken cancellationToken = default);
+        Task<T> GetSupabaseDataAsync<T>(string endpoint, JsonTypeInfo<T> jsonTypeInfo, CancellationToken cancellationToken = default);
     }
 }
