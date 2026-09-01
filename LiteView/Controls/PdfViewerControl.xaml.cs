@@ -85,7 +85,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// pages use a separate higher DPI (see OVERLAY_DPI). The two-tier DPI scheme
     /// trades off-screen render quality for fast scroll performance.
     /// </summary>
-    private const double BASIC_DPI = 300;
+    private const double MAX_BASIC_DPI = 300;
 
     private const double MAX_DPI = 1000;
 
@@ -411,6 +411,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     private async Task LoadPagesAsync(int startIndex, int endIndex, double zoom)
     {
         // Target dpi for RenderPartialForSpecificPage
+        double basicDpi = Math.Min(GetDeviceDpi(PdfScrollViewer), MAX_BASIC_DPI);
         double targetDpi = Math.Min(GetDeviceDpi(PdfScrollViewer) * zoom, MAX_DPI);
         Debug.WriteLine(targetDpi);
 
@@ -423,7 +424,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
             try
             {
-                var bitmap = await RenderBitmap(pageIndex, targetDpi / 2f);
+                var bitmap = await RenderBitmap(pageIndex, basicDpi);
                 PdfPages[pageIndex].PageImage = bitmap;
                 PdfPages[pageIndex].IsLoading = false;
             }
