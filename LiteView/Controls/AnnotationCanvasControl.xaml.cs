@@ -31,8 +31,9 @@ namespace LiteView.Controls
         private double _currentStrokeThickness = 1.0;
 
         private readonly List<Stroke> _strokes = new();
-        private Stroke _currentDrawingStroke;
-        private Microsoft.UI.Xaml.Shapes.Path _currentDrawingPath;
+        private readonly Dictionary<uint, DrawingState> _activeDrawings = new();
+        //private Stroke _currentDrawingStroke;
+        //private Microsoft.UI.Xaml.Shapes.Path _currentDrawingPath;
 
         public bool IsEraser = false;
 
@@ -76,21 +77,22 @@ namespace LiteView.Controls
                 return;
             }
 
-            _currentDrawingStroke = new Stroke(new List<Vector2>(), _currentPenColor, (float)_currentStrokeThickness);
-            _currentDrawingStroke.Points.Add(new Vector2((float)point.X, (float)point.Y));
+            var stroke = new Stroke(new List<Vector2>(), _currentPenColor, (float)_currentStrokeThickness);
+            stroke.Points.Add(new Vector2((float)point.X, (float)point.Y));
 
-            _currentDrawingPath = new Microsoft.UI.Xaml.Shapes.Path
+            var path = new Microsoft.UI.Xaml.Shapes.Path
             {
                 Name = "Current",
-                Stroke = new SolidColorBrush(_currentDrawingStroke.PenColor),
-                StrokeThickness = _currentDrawingStroke.Thickness,
+                Stroke = new SolidColorBrush(stroke.PenColor),
+                StrokeThickness = stroke.Thickness,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
             };
 
             DrawingCanvas.CapturePointer(e.Pointer);
-            DrawingCanvas.Children.Add(_currentDrawingPath);
+            DrawingCanvas.Children.Add(path);
+            _activeDrawings[e.Pointer.PointerId] = new DrawingState(stroke, path);
         }
 
         private void DrawingCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
@@ -103,18 +105,10 @@ namespace LiteView.Controls
                 return;
             }
 
-            if (_currentDrawingStroke == null || _currentDrawingPath == null) return;
+            if (!_activeDrawings.TryGetValue(e.Pointer.PointerId, out var state)) return;
 
-            _currentDrawingStroke.Points.Add(new Vector2((float)point.X, (float)point.Y));
-
-            // NOTE: We resolve the live Path by name instead of using _currentDrawingPath directly.
-            // This is because XAML namescope FindName on a code-created element with .Name set
-            // may not work reliably — _currentDrawingPath would be the safer reference here.
-            // If live stroke drawing ever stops working, replace FindName("Current") with _currentDrawingPath.
-            var currentPath = FindName("Current") as Microsoft.UI.Xaml.Shapes.Path;
-
-            if (currentPath != null)
-                currentPath.Data = CreateCurrentPathDataFromStroke(_currentDrawingStroke);
+            state.Stroke.Points.Add(new Vector2((float)point.X, (float)point.Y));
+            state.Path.Data = CreateCurrentPathDataFromStroke(state.Stroke);
         }
 
         private void CanvasContainer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -124,35 +118,45 @@ namespace LiteView.Controls
 
         private void DrawingCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            FinalizeCurrentStroke(e.Pointer);
+            FinalizeStroke(e.Pointer);
         }
 
         private void DrawingCanvas_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            FinalizeCurrentStroke(e.Pointer);
+            FinalizeStroke(e.Pointer);
         }
 
         private void DrawingCanvas_PointerCanceled(object sender, PointerRoutedEventArgs e)
         {
-            FinalizeCurrentStroke(e.Pointer);
+            FinalizeStroke(e.Pointer);
         }
 
-        private void FinalizeCurrentStroke(Pointer pointer)
+        private void FinalizeStroke(Pointer pointer)
         {
+            if (!_activeDrawings.TryGetValue(pointer.PointerId, out var state)) 
+                return;
+
             // Threshold: >= 1 point means a click was registered (even without drag).
             // However, CreatePathFromStroke requires >= 2 points to produce geometry.
             // Single-point clicks silently add an invisible stroke to _strokes — it has no
             // visual but participates in eraser hit-testing and consumes a name slot.
-            if (_currentDrawingStroke?.Points.Count >= 1)
+            if (state.Stroke.Points.Count >= 1)
             {
-                var path = CreatePathFromStroke(_currentDrawingStroke); // null if < 2 points
-                var currentPath = FindName("Current") as Microsoft.UI.Xaml.Shapes.Path;
-                if (path != null) DrawingCanvas.Children.Add(path);
-                if (currentPath != null) DrawingCanvas.Children.Remove(currentPath);
-                _strokes.Add(_currentDrawingStroke); // added even when path is null
+                var finalStroke = CreatePathFromStroke(state.Stroke);
+                if (finalStroke != null)
+                {
+                    DrawingCanvas.Children.Add(finalStroke);
+                }
+                // Remove the temporary path used during drawing, even if finalStroke is null (single-point click).
+                DrawingCanvas.Children.Remove(state.Path);
+                _strokes.Add(state.Stroke); // added even when finalStroke is null
+            }
+            else
+            {
+                DrawingCanvas.Children.Remove(state.Path);
             }
 
-            _currentDrawingStroke = null;
+            _activeDrawings.Remove(pointer.PointerId);
             DrawingCanvas.ReleasePointerCapture(pointer);
         }
 

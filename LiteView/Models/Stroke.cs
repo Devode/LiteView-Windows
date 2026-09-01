@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using Windows.UI;
 
@@ -11,3 +12,5 @@ namespace LiteView.Models;
 /// <param name="PenColor">Stroke color (Windows.UI.Color uses RGBA byte order, not BGRA).</param>
 /// <param name="Thickness">Stroke width in canvas pixels.</param>
 public record Stroke(List<Vector2> Points, Color PenColor, float Thickness);
+
+public record DrawingState(Stroke Stroke, Microsoft.UI.Xaml.Shapes.Path Path);
