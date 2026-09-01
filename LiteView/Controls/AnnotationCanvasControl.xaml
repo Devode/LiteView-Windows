@@ -14,10 +14,13 @@
             <RectangleGeometry x:Name="ContainerClipRect" Rect="0,0,800,600" />
         </Grid.Clip>
         <Canvas x:Name="DrawingCanvas"
-                      Background="Transparent"
-                      PointerPressed="DrawingCanvas_PointerPressed"
-                      PointerMoved="DrawingCanvas_PointerMoved"
-                      PointerReleased="DrawingCanvas_PointerReleased">
+                Background="Transparent"
+                ManipulationMode="None"
+                PointerPressed="DrawingCanvas_PointerPressed"
+                PointerMoved="DrawingCanvas_PointerMoved"
+                PointerReleased="DrawingCanvas_PointerReleased"
+                PointerExited="DrawingCanvas_PointerExited"
+                PointerCanceled="DrawingCanvas_PointerCanceled">
 
         </Canvas>
     </Grid>

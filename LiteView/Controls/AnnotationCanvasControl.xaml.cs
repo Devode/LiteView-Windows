@@ -44,8 +44,6 @@ namespace LiteView.Controls
         public static readonly DependencyProperty SimplifiedToleranceProperty = DependencyProperty.Register(
             "SimplifiedThreshold", typeof(float), typeof(AnnotationCanvasControl), new PropertyMetadata(null));
 
-       
-
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
@@ -70,6 +68,7 @@ namespace LiteView.Controls
         private void DrawingCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             var point = e.GetCurrentPoint(DrawingCanvas).Position;
+            e.Handled = true;
 
             if (IsEraser)
             {
@@ -125,6 +124,21 @@ namespace LiteView.Controls
 
         private void DrawingCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
+            FinalizeCurrentStroke(e.Pointer);
+        }
+
+        private void DrawingCanvas_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            FinalizeCurrentStroke(e.Pointer);
+        }
+
+        private void DrawingCanvas_PointerCanceled(object sender, PointerRoutedEventArgs e)
+        {
+            FinalizeCurrentStroke(e.Pointer);
+        }
+
+        private void FinalizeCurrentStroke(Pointer pointer)
+        {
             // Threshold: >= 1 point means a click was registered (even without drag).
             // However, CreatePathFromStroke requires >= 2 points to produce geometry.
             // Single-point clicks silently add an invisible stroke to _strokes — it has no
@@ -139,7 +153,7 @@ namespace LiteView.Controls
             }
 
             _currentDrawingStroke = null;
-            DrawingCanvas.ReleasePointerCapture(e.Pointer);
+            DrawingCanvas.ReleasePointerCapture(pointer);
         }
 
         /// <summary>
@@ -252,5 +266,6 @@ namespace LiteView.Controls
 
             return new PathGeometry { Figures = { figure } };
         }
+
     }
 }
