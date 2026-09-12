@@ -20,7 +20,8 @@
                 PointerMoved="DrawingCanvas_PointerMoved"
                 PointerReleased="DrawingCanvas_PointerReleased"
                 PointerExited="DrawingCanvas_PointerExited"
-                PointerCanceled="DrawingCanvas_PointerCanceled">
+                PointerCanceled="DrawingCanvas_PointerCanceled"
+                PointerCaptureLost="DrawingCanvas_PointerCaptureLost">
 
         </Canvas>
     </Grid>

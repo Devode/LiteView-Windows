@@ -68,8 +68,10 @@ namespace LiteView.Controls
 
         private void DrawingCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            var point = e.GetCurrentPoint(DrawingCanvas).Position;
             e.Handled = true;
+            this.CancelDirectManipulations();
+
+            var point = e.GetCurrentPoint(DrawingCanvas).Position;
 
             if (IsEraser)
             {
@@ -131,6 +133,11 @@ namespace LiteView.Controls
             FinalizeStroke(e.Pointer);
         }
 
+        private void DrawingCanvas_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            FinalizeStroke(e.Pointer);
+        }
+
         private void FinalizeStroke(Pointer pointer)
         {
             if (!_activeDrawings.TryGetValue(pointer.PointerId, out var state)) 
@@ -157,7 +164,15 @@ namespace LiteView.Controls
             }
 
             _activeDrawings.Remove(pointer.PointerId);
-            DrawingCanvas.ReleasePointerCapture(pointer);
+
+            try
+            {
+                DrawingCanvas.ReleasePointerCapture(pointer);
+            }
+            catch
+            {
+
+            }
         }
 
         /// <summary>
@@ -271,5 +286,6 @@ namespace LiteView.Controls
             return new PathGeometry { Figures = { figure } };
         }
 
+        
     }
 }
