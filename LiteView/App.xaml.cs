@@ -16,6 +16,8 @@ using LiteView.Pages;
 using Microsoft.Windows.AppLifecycle;
 using System.Linq;
 using LiteView.Models;
+using Microsoft.Windows.Globalization;
+using System.Threading.Tasks;
 
 namespace LiteView
 {
@@ -59,6 +61,8 @@ namespace LiteView
 
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
+            ApplicationLanguages.PrimaryLanguageOverride = "en-US";
+
             Init();
         }
 
@@ -107,6 +111,12 @@ namespace LiteView
 
             Host.Start();
 
+            _ = InitializeAndLaunchAsync(appActivationArguments);
+        }
+
+        private async Task InitializeAndLaunchAsync(
+            AppActivationArguments appActivationArguments)
+        {
             var pdfService = Host.Services.GetRequiredService<IPdfDataService>();
 
             LocalFolderPath = ApplicationData.Current.LocalFolder.Path;
@@ -149,8 +159,9 @@ namespace LiteView
                     Debug.WriteLine(filePath);
                     Debug.WriteLine(navFrame is null);
                     navFrame?.Navigate(
-                        typeof(PdfViewerPage), 
-                        new PdfItem{
+                        typeof(PdfViewerPage),
+                        new PdfItem
+                        {
                             FilePath = filePath,
                         });
                 }
@@ -160,6 +171,11 @@ namespace LiteView
         public static T GetService<T>() where T : class
         {
             return Host!.Services.GetRequiredService<T>();
+        }
+
+        public static void SetMainWindowInstance(MainWindow mainWindow)
+        {
+            MainWindowInstance = mainWindow;
         }
     }
 }

@@ -58,9 +58,9 @@
                               SelectionChangedTrigger="Committed"
                               SelectionChanged="themeMode_SelectionChanged"
                               SelectedIndex="{x:Bind ViewModel.ThemeMode, Mode=TwoWay}">
-                        <ComboBoxItem x:Uid="ThemeUsingSystemSetting" Tag="Default" />
-                        <ComboBoxItem x:Uid="ThemeLight" Tag="Light" />
-                        <ComboBoxItem x:Uid="ThemeDark" Tag="Dark" />
+                        <ComboBoxItem x:Uid="Theme_UsingSystemSetting" Tag="Default" />
+                        <ComboBoxItem x:Uid="Theme_Light" Tag="Light" />
+                        <ComboBoxItem x:Uid="Theme_Dark" Tag="Dark" />
                     </ComboBox>
                 </controls:SettingsCard>
 
