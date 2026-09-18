@@ -85,6 +85,8 @@ namespace LiteView.Pages
         }
         private float _strokeSimplifiedTolerance = 0.5f;
 
+        private bool _isPenBtnChecked;
+
         public SolidColorBrush ToBrush(Color color) => new SolidColorBrush(color);
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -161,10 +163,38 @@ namespace LiteView.Pages
                 }
                 else
                 {
+                    Debug.WriteLine($"[Toobar Button] is checked: {clickedButton.IsChecked}");
                     clickedButton.IsChecked = true;
                     UncheckOthers(clickedButton);
                     UpdateToolState(clickedButton.Name);
                 }
+
+                Debug.WriteLine($"[Toobar Button] is pressed: {clickedButton.IsPressed}");
+                Debug.WriteLine($"[Toobar Button] is checked: {clickedButton.IsChecked}");
+
+
+                if (clickedButton == BtnPen)
+                {
+                    if (!_isPenBtnChecked)
+                    {
+                        _isPenBtnChecked = true;
+                    }
+                    else
+                    {
+                        FlyoutBase.ShowAttachedFlyout(BtnPen);
+
+                    }
+                }
+                else _isPenBtnChecked = false;
+
+                //if (_isPenBtnChecked)
+                //{
+                //    if (clickedButton == BtnPen)
+                //    {
+                //        FlyoutBase.ShowAttachedFlyout(BtnPen);
+                //    }
+                //}
+
             }
         }
 

@@ -161,6 +161,32 @@
                                       Style="{StaticResource ToolbarButtonStyle}">
                             <!-- 铅笔 -->
                             <FontIcon Glyph="&#xE70F;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+
+                            <!-- 画笔设置 -->
+                            <FlyoutBase.AttachedFlyout>
+                                <Flyout>
+                                    <StackPanel MinWidth="200" Spacing="12">
+                                        <Slider x:Name="StrokeThicknessSlider" x:Uid="StrokeThickness" 
+                                                Minimum="0.1" Maximum="24" StepFrequency="0.1" 
+                                                ValueChanged="StrokeThicknessSlider_ValueChanged" 
+                                                Value="{x:Bind StrokeThickness, Mode=TwoWay}" />
+
+                                        <StackPanel Orientation="Vertical" Spacing="12">
+                                            <TextBlock x:Uid="PenColor"/>
+                                            <SplitButton x:Name="PickColorBtn">
+                                                <Border x:Name="CurrentColor" Width="32" Height="32" Background="{x:Bind ToBrush(PenColor), Mode=OneWay}" CornerRadius="4,0,0,4"/>
+                                                <SplitButton.Flyout>
+                                                    <Flyout Placement="Bottom">
+                                                        <ColorPicker x:Name="PenColorPicker" Color="Red" ColorChanged="PenColorPicker_ColorChanged" />
+                                                    </Flyout>
+                                                </SplitButton.Flyout>
+                                            </SplitButton>
+                                        </StackPanel>
+
+                                    </StackPanel>
+                                    
+                                </Flyout>
+                            </FlyoutBase.AttachedFlyout>
                         </ToggleButton>
                         <ToggleButton x:Name="BtnEraser" x:Uid="Toolbar_Eraser" Click="ToolButton_Click"
                                       Style="{StaticResource ToolbarButtonStyle}">
@@ -196,17 +222,23 @@
                             <Button.Flyout>
                                 <Flyout Placement="BottomEdgeAlignedRight">
                                     <StackPanel Spacing="12" MinWidth="200">
-                                        <Slider Header="按钮缩放" Minimum="8" Maximum="64" StepFrequency="0.1" Value="{x:Bind ButtonZoom, Mode=TwoWay}" />
-                                        <Slider x:Name="StrokeThicknessSlider" Header="画笔粗细" Minimum="0.1" Maximum="24" StepFrequency="0.1" ValueChanged="StrokeThicknessSlider_ValueChanged" Value="{x:Bind StrokeThickness, Mode=TwoWay}" />
-                                        <SplitButton x:Name="PickColorBtn">
-                                            <Border x:Name="CurrentColor" Width="32" Height="32" Background="{x:Bind ToBrush(PenColor), Mode=OneWay}" CornerRadius="4,0,0,4"/>
-                                            <SplitButton.Flyout>
-                                                <Flyout Placement="Bottom">
-                                                    <ColorPicker x:Name="PenColorPicker" Color="Red" ColorChanged="PenColorPicker_ColorChanged" />
-                                                </Flyout>
-                                            </SplitButton.Flyout>
-                                        </SplitButton>
-                                        <Button Content="更多">
+                                        <Slider x:Uid="ToolBarZoom" Minimum="8" Maximum="64" StepFrequency="0.1" Value="{x:Bind ButtonZoom, Mode=TwoWay}" />
+
+                                        <!-- <Slider x:Name="StrokeThicknessSlider" x:Uid="StrokeThickness" Minimum="0.1" Maximum="24" StepFrequency="0.1" ValueChanged="StrokeThicknessSlider_ValueChanged" Value="{x:Bind StrokeThickness, Mode=TwoWay}" /> -->
+
+                                        <!-- <StackPanel Orientation="Vertical" Spacing="12">
+                                            <TextBlock x:Uid="PenColor"/>
+                                            <SplitButton x:Name="PickColorBtn">
+                                                <Border x:Name="CurrentColor" Width="32" Height="32" Background="{x:Bind ToBrush(PenColor), Mode=OneWay}" CornerRadius="4,0,0,4"/>
+                                                <SplitButton.Flyout>
+                                                    <Flyout Placement="Bottom">
+                                                        <ColorPicker x:Name="PenColorPicker" Color="Red" ColorChanged="PenColorPicker_ColorChanged" />
+                                                    </Flyout>
+                                                </SplitButton.Flyout>
+                                            </SplitButton>
+                                        </StackPanel> -->
+                                        
+                                        <Button x:Uid="MoreOptions">
                                             <Button.Flyout>
                                                 <Flyout>
                                                     <StackPanel Spacing="12" MinWidth="200">
