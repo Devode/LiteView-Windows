@@ -21,6 +21,8 @@
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	<AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
 	<PackageCertificateThumbprint>A87A89CC3E879094107D4D00FCFB8C17DA868ED7</PackageCertificateThumbprint>
+  
+	<AppxDefaultResourceQualifiers>Language=en-US;zh-CN</AppxDefaultResourceQualifiers>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="appsettings.json">
