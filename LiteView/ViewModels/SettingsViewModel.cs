@@ -8,6 +8,7 @@ using LiteView.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.Windows.BadgeNotifications;
+using Microsoft.Windows.AppLifecycle;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -35,6 +36,13 @@ namespace LiteView.ViewModels
         Dark
     }
 
+    public enum Language
+    {
+        Default,
+        Chinese,
+        English
+    }
+
     public partial class SettingsViewModel : ObservableObject
     {
         private readonly IUpdateService _updateService;
@@ -43,6 +51,9 @@ namespace LiteView.ViewModels
 
         [ObservableProperty]
         private int _themeMode = (int)Themes.Default;
+
+        [ObservableProperty]
+        private int _languageSetting = (int)Language.Default;
 
         [ObservableProperty]
         private string _currentVersion = "";
@@ -56,13 +67,18 @@ namespace LiteView.ViewModels
         [ObservableProperty]
         private string _networkErrorInfo;
 
+        [ObservableProperty]
+        private bool _isRestartRequiredInfoOpen = false;
+
         public IRelayCommand<string> SwitchThemeCommand { get; }
+        public IRelayCommand<string> SwitchLanguageCommand { get; }
         public ICommand CheckUpdateCommand { get; }
+        public ICommand RestartNowCommand { get; }
 
         private const string themeSettingKey = "AppTheme";
 
-        public SettingsViewModel(IUpdateService updateService, 
-            INetworkService networkService, 
+        public SettingsViewModel(IUpdateService updateService,
+            INetworkService networkService,
             IMessageDialogService dialogService)
         {
             _updateService = updateService;
@@ -70,9 +86,12 @@ namespace LiteView.ViewModels
             _dialogService = dialogService;
 
             SwitchThemeCommand = new RelayCommand<string>(OnSwitchTheme);
+            SwitchLanguageCommand = new RelayCommand<string>(OnSwitchLanguage);
+            RestartNowCommand = new RelayCommand(RestartNow);
             CheckUpdateCommand = new AsyncRelayCommand(CheckForUpdateAsync);
 
             InitializeThemeSetting();
+            InitializeLanguageSetting();
 
             CurrentVersion = Package.Current.Id.Version.ToFormattedString();
         }
@@ -80,11 +99,14 @@ namespace LiteView.ViewModels
         private void InitializeThemeSetting()
         {
 
-            var localSettings = ApplicationData.Current.LocalSettings;
+            //var localSettings = ApplicationData.Current.LocalSettings;
 
-            if (localSettings.Values.ContainsKey(themeSettingKey))
+            //if (localSettings.Values.ContainsKey(themeSettingKey))
+
+            var themeValue = AppSettingsHelper.GetValue(themeSettingKey);
+            if (themeValue != null)
             {
-                var savedTheme = localSettings.Values[themeSettingKey].ToString();
+                var savedTheme = themeValue.ToString();
                 if (Enum.TryParse<ElementTheme>(savedTheme, out var theme))
                 {
                     ThemeMode = (int)theme;
@@ -100,16 +122,73 @@ namespace LiteView.ViewModels
             }
         }
 
+        private void InitializeLanguageSetting()
+        {
+            var languageValue = AppSettingsHelper.GetValue("AppLanguage");
+            if (languageValue != null)
+            {
+                var savedLanguage = languageValue.ToString();
+                switch (savedLanguage)
+                {
+                    case "zh-CN":
+                        LanguageSetting = (int)Language.Chinese;
+                        break;
+                    case "en-US":
+                        LanguageSetting = (int)Language.English;
+                        break;
+                    default:
+                        LanguageSetting = (int)Language.Default;
+                        break;
+                }
+            }
+            else
+            {
+                LanguageSetting = (int)Language.Default;
+            }
+        }
+
         private void OnSwitchTheme(string tag)
         {
             string selectedThemeString = tag;
 
-            var localSettings = ApplicationData.Current.LocalSettings;
-            localSettings.Values[themeSettingKey] = selectedThemeString;
+            //var localSettings = ApplicationData.Current.LocalSettings;
+            //localSettings.Values[themeSettingKey] = selectedThemeString;
+            AppSettingsHelper.SetValue(themeSettingKey, selectedThemeString);
 
             if (Enum.TryParse<ElementTheme>(selectedThemeString, out var theme))
             {
                 ThemeHelper.RootTheme = theme;
+            }
+        }
+
+        private void OnSwitchLanguage(string tag)
+        {
+            string selectedLanguageString = tag;
+
+            Debug.WriteLine($"[OnSwitchLanguage] Selected language: {selectedLanguageString}");
+
+            var oldLanguageValue = AppSettingsHelper.GetValue("AppLanguage");
+            if (oldLanguageValue != null && oldLanguageValue.ToString() != selectedLanguageString)
+            {
+                IsRestartRequiredInfoOpen = true;
+            }
+
+            AppSettingsHelper.SetValue("AppLanguage", selectedLanguageString);
+            //if (Enum.TryParse<Language>(selectedLanguageString, out var language))
+            //{
+            //    LanguageSetting = (int)language;
+            //}
+            switch (selectedLanguageString)
+            {
+                case "zh-CN":
+                    LanguageSetting = (int)Language.Chinese;
+                    break;
+                case "en-US":
+                    LanguageSetting = (int)Language.English;
+                    break;
+                default:
+                    LanguageSetting = (int)Language.Default;
+                    break;
             }
         }
 
@@ -147,7 +226,7 @@ namespace LiteView.ViewModels
                     {
                         await Windows.System.Launcher.LaunchUriAsync(new Uri(downloadUrls[0].Url));
                     }
-                } 
+                }
                 else
                 {
                     IsNoUpdateInfoOpen = true;
@@ -156,9 +235,15 @@ namespace LiteView.ViewModels
             catch (Exception ex)
             {
                 IsNetworkErrorInfoOpen = true;
-                NetworkErrorInfo = ResourceHelper.GetLocalizedString("NetworkErrorInfo", ex.Message);
+                NetworkErrorInfo = ResourceHelper.GetLocalizedString("NetworkError_Info", ex.Message);
                 Debug.WriteLine($"[CheckForUpdate] {ex.Message}");
             }
+        }
+
+        private void RestartNow()
+        {
+            // Restart the application
+            Microsoft.Windows.AppLifecycle.AppInstance.Restart("");
         }
     }
 }

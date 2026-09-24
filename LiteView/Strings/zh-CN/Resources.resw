@@ -125,17 +125,25 @@
     <value>设置</value>
     <comment>设置</comment>
   </data>
-  <data name="ThemeDark.Content" xml:space="preserve">
+  <data name="Theme_Dark.Content" xml:space="preserve">
     <value>深色</value>
     <comment>深色主题</comment>
   </data>
-  <data name="ThemeLight.Content" xml:space="preserve">
+  <data name="Theme_Light.Content" xml:space="preserve">
     <value>浅色</value>
     <comment>浅色主题</comment>
   </data>
-  <data name="ThemeUsingSystemSetting.Content" xml:space="preserve">
+  <data name="Theme_UsingSystemSetting.Content" xml:space="preserve">
     <value>跟随系统</value>
     <comment>跟随系统设置的主题</comment>
+  </data>
+  <data name="Language_UsingSystemSetting.Content" xml:space="preserve">
+    <value>系统语言</value>
+    <comment>系统语言</comment>
+  </data>
+  <data name="Language_zh_CN.Content" xml:space="preserve">
+    <value>简体中文</value>
+    <comment>系统语言</comment>
   </data>
   <data name="Theme.Description" xml:space="preserve">
     <value>选择应用的主题</value>
@@ -144,6 +152,10 @@
   <data name="Theme.Header" xml:space="preserve">
     <value>主题</value>
     <comment>设置中主题设置项</comment>
+  </data>
+  <data name="Lang.Header" xml:space="preserve">
+    <value>语言</value>
+    <comment>设置中语言设置项</comment>
   </data>
   <data name="ModifiedDate.Text" xml:space="preserve">
     <value>修改时间：</value>
@@ -177,8 +189,100 @@
     <value>网络异常</value>
     <comment>网络异常提示标题</comment>
   </data>
-  <data name="NetworkErrorInfo" xml:space="preserve">
+  <data name="NetworkError_Info" xml:space="preserve">
     <value>网络出现异常：“{0}”。</value>
     <comment>网络异常提示信息</comment>
+  </data>
+  <data name="SearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索</value>
+    <comment>搜索框的占位文本</comment>
+  </data>
+  <data name="NavigationViewItem_PdfList.Content" xml:space="preserve">
+    <value>PDF 列表</value>
+    <comment>PdfList 导航项目的内容</comment>
+  </data>
+  <data name="NavigationViewItem_PdfViewer.Content" xml:space="preserve">
+    <value>PDF 阅读器</value>
+    <comment>PdfViewer 导航项目的内容</comment>
+  </data>
+  <data name="Toolbar_Menu.ToolTipService.ToolTip" xml:space="preserve">
+    <value>菜单</value>
+    <comment>PDF 阅读器工具栏菜单按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_Select.ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择</value>
+    <comment>PDF 阅读器工具栏选择按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_ZoomOut.ToolTipService.ToolTip" xml:space="preserve">
+    <value>缩小</value>
+    <comment>PDF 阅读器工具栏缩小按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_Settings.ToolTipService.ToolTip" xml:space="preserve">
+    <value>设置</value>
+    <comment>PDF 阅读器工具栏设置按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_FitToWindow.ToolTipService.ToolTip" xml:space="preserve">
+    <value>适应屏幕</value>
+    <comment>PDF 阅读器工具栏适应屏幕按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_ZoomIn.ToolTipService.ToolTip" xml:space="preserve">
+    <value>放大</value>
+    <comment>PDF 阅读器工具栏放大按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_Clear.ToolTipService.ToolTip" xml:space="preserve">
+    <value>清空</value>
+    <comment>PDF 阅读器工具栏清空按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_Eraser.ToolTipService.ToolTip" xml:space="preserve">
+    <value>擦除</value>
+    <comment>PDF 阅读器工具栏擦除按钮悬停提示</comment>
+  </data>
+  <data name="Toolbar_Pen.ToolTipService.ToolTip" xml:space="preserve">
+    <value>画笔</value>
+    <comment>PDF 阅读器工具栏画笔按钮悬停提示</comment>
+  </data>
+  <data name="PageNumber.Text" xml:space="preserve">
+    <value>页码</value>
+    <comment>页码</comment>
+  </data>
+  <data name="ToolBarZoom.Header" xml:space="preserve">
+    <value>工具栏缩放</value>
+    <comment>工具栏缩放设置</comment>
+  </data>
+  <data name="StrokeSimplifiedTolerance.Header" xml:space="preserve">
+    <value>笔迹简化容差</value>
+    <comment>工具栏设置中笔迹简化容差设置项</comment>
+  </data>
+  <data name="StrokeThickness.Header" xml:space="preserve">
+    <value>画笔粗细</value>
+    <comment>画笔粗细设置</comment>
+  </data>
+  <data name="PenColor.Text" xml:space="preserve">
+    <value>画笔颜色</value>
+    <comment>画笔颜色设置</comment>
+  </data>
+  <data name="MoreOptions.Content" xml:space="preserve">
+    <value>更多选项</value>
+    <comment>工具栏设置中的更多选项按钮</comment>
+  </data>
+  <data name="ToolBar_PageBtn.ToolTipService.ToolTip" xml:space="preserve">
+    <value>页码，单击打开“跳转到指定页面”窗口</value>
+    <comment>PDF 阅读器工具栏页码按钮</comment>
+  </data>
+  <data name="Language_en_US.Content" xml:space="preserve">
+    <value>English (US)</value>
+    <comment>系统语言</comment>
+  </data>
+  <data name="RestartRequired.Title" xml:space="preserve">
+    <value>需要重启应用</value>
+    <comment>重启应用提示标题</comment>
+  </data>
+  <data name="RestartRequired.Message" xml:space="preserve">
+    <value>应用此设置项需要重启。</value>
+    <comment>重启应用提示标题</comment>
+  </data>
+  <data name="RestartNow.Content" xml:space="preserve">
+    <value>立即重启</value>
+    <comment>现在重启</comment>
   </data>
 </root>

@@ -68,9 +68,10 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     private PdfDocument _pdfDocument;
     private double _lastScrollingVerticalOffset = 0;
     private double _lastScrollingHorizontalOffset = 0;
-    private bool _isScrolling = false;
-    private bool _isLoadingPages = false;
-    
+    private bool _isLoadInFlight = false;
+    private bool _isLoadPending = false;
+    private bool _isUnloaded = false;
+
     /// <summary>Maps page index to cumulative Y offset from the top of the document.</summary>
     private Dictionary<int, double> _pageToTopDistances = new();
 
@@ -90,7 +91,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     private const double MAX_DPI = 1000;
 
     /// <summary>Debounce delay in milliseconds before triggering a scroll-driven load.</summary>
-    private const int LOAD_DEBOUNCE_MS = 100;
+    private const int LOAD_DEBOUNCE_MS = 50;
 
     /// <summary>View models for every page in the document. Bound to an ItemsRepeater.</summary>
     public List<PdfPageViewModel> PdfPages { get; set; } = new();
@@ -137,7 +138,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         }
     }
     public static readonly DependencyProperty SimplifiedToleranceProperty = DependencyProperty.Register(
-        "SimplifiedThreshold", typeof(float), typeof(AnnotationCanvasControl), new PropertyMetadata(null));
+        "SimplifiedTolerance", typeof(float), typeof(PdfViewerControl), new PropertyMetadata(null));
 
     public PdfViewerControl()
     {
@@ -149,24 +150,66 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// Unloaded handler. Disposes the PDF document and clears all page data.
     ///
     /// NOTE: Unloaded also fires on Frame navigation (page caching) or reparenting.
-    /// Since PdfPath is unchanged afterwards, OnPdfPathChanged won't re-fire, so
-    /// returning to this page leaves a disposed document and empty PdfPages.
-    /// A reload mechanism (e.g., re-setting PdfPath) would be needed to recover.
+    /// Callers are expected to re-set PdfPath to trigger a reload when the page
+    /// is revisited.
     /// </summary>
     private void PdfViewerControl_Unloaded(object sender, RoutedEventArgs e)
     {
-        _pdfDocument?.Dispose();
-        _cts?.Cancel();
-        _cts?.Dispose();
+        Debug.WriteLine($"[INFO] PdfViewerControl Unloaded");
+        _isUnloaded = true;
+
+        var cts = _cts;
+        _cts = null;
+        try { cts?.Cancel(); } catch { }
+        try { cts?.Dispose(); } catch { }
+
+        try { _pdfDocument?.Dispose(); } catch { }
+        _pdfDocument = null;
         PdfPages.Clear();
+        PdfPagesRepeater.ItemsSource = null;
     }
 
     /// <summary>
-    /// Load a PDF, build the page layout model, and render the first two pages.
+    /// DependencyProperty changed callback — triggers a full PDF reload when PdfPath changes.
+    /// </summary>
+    private static void OnPdfPathChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not PdfViewerControl control) return;
+
+        _ = SafeInitializePdf(control, e.NewValue as string);
+    }
+
+    /// <summary>
+    /// Fire-and-forget wrapper around <see cref="InitializePdf"/>.
+    /// Used because DependencyProperty callbacks cannot be async.
+    /// </summary>
+    /// <param name="control"></param>
+    /// <param name="pdfPath"></param>
+    /// <returns></returns>
+    private static async Task SafeInitializePdf(PdfViewerControl control, string pdfPath)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(pdfPath) || !File.Exists(pdfPath))
+            {
+                Debug.WriteLine($"[InitializePdf] PDF file does not exist: {pdfPath}");
+                return;
+            }
+            await control.InitializePdf(pdfPath);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[InitializePdf] {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Load a PDF, build the page layout model, and render the first few pages.
     /// Each page's DocumentTop is the cumulative height of all preceding pages plus a 10pt gap.
     /// </summary>
     private async Task InitializePdf(string pdfPath)
     {
+        _isUnloaded = false;
         _pdfDocument?.Dispose();
         PdfPages.Clear();
         _pageToTopDistances.Clear();
@@ -250,6 +293,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// </summary>
     public void FitToWindow()
     {
+        if (PdfPages == null || PdfPages.Count == 0) return;
+
         var currentPage = CurrentPageIndex;
         var pageWidth = PdfPages[currentPage].PageWidth;
         var pageHeight = PdfPages[currentPage].PageHeight;
@@ -302,29 +347,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         PdfScrollViewer.VerticalScrollMode = isEnabled ? ScrollMode.Enabled : ScrollMode.Disabled;
     }
 
-    /// <summary>
-    /// DependencyProperty changed callback — triggers a full PDF reload when PdfPath changes.
-    ///
-    /// WARNING: InitializePdf is async Task but is invoked without await (fire-and-forget).
-    /// This means:
-    ///   - The try/catch only catches synchronous exceptions before the first await.
-    ///   - Any async failure (e.g., bad file path inside PdfDocument.Load) becomes an
-    ///     unobserved Task exception, not caught here.
-    /// This is a known limitation of DP callbacks which cannot be async.
-    /// </summary>
-    private static void OnPdfPathChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var control = d as PdfViewerControl;
-
-        try
-        {
-            control?.InitializePdf((string)e.NewValue);
-        }
-        catch (Exception ex)
-        { 
-            Debug.WriteLine($"Failed to load PDF file: {ex.Message}");
-        }
-    }
+    
 
     /// <summary>
     /// Scroll-changed handler with debounce. On each scroll:
@@ -335,6 +358,16 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// </summary>
     private async void PdfScrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
     {
+        
+
+
+        //Debug.WriteLine($"[INFO] IsUnloaded: {_isUnloaded}");
+        //Debug.WriteLine($"[INFO] Is CTS Null: {_cts == null}");
+        if (_isUnloaded) return;
+
+        //Debug.WriteLine($"[INFO] IsLoadInFlight: {_isLoadInFlight}");
+        //if (_cts == null) return;
+
         var scrollViewer = (ScrollViewer)sender;
 
         double viewportHeight = scrollViewer.ViewportHeight;
@@ -356,52 +389,97 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
             CurrentPageIndex = centerPageIndex;
         }
 
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
+        var oldCts = _cts;
+        var newCts = new CancellationTokenSource();
+        _cts = newCts;
+        try { oldCts?.Cancel(); oldCts?.Dispose(); } catch { }
 
         try
         {
-            await Task.Delay(LOAD_DEBOUNCE_MS, _cts.Token);
-            await LoadPagesAsync_WithLock(scrollViewer);
+            await Task.Delay(LOAD_DEBOUNCE_MS, newCts.Token);
+            //await LoadPagesAsync_WithLock(scrollViewer);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) { return; }
+        catch (ObjectDisposedException) { return; }
+        catch (Exception ex)
         {
+            //Debug.WriteLine($"[ViewChanged] {ex.Message}");
+            return;
+        }
+
+        try
+        {
+            await RequestLoadAsync();
+        }
+        catch (Exception ex)
+        {
+            //Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Guarded wrapper around LoadPagesAsync that prevents concurrent loads.
-    /// Determines the visible page range from the ScrollViewer's current state.
+    /// Requests a page load. Multiple calls are collapsed: while a load is in
+    /// flight, subsequent calls set a pending flag; when the current pass
+    /// completes, the loop re-reads the ScrollViewer state and renders the
+    /// latest visible range (latest-wins).
     /// </summary>
-    private async Task LoadPagesAsync_WithLock(ScrollViewer scrollViewer)
+    /// <returns></returns>
+    private async Task RequestLoadAsync()
     {
-        if (_isLoadingPages) return;
-        // `_isLoadingPages` acts as a reentrancy guard, not a queue.
-        // Scroll events that arrive while a load is in-flight are silently dropped.
-        // Once the in-flight load completes, the next scroll event will pick up the
-        // current viewport position. No "pending load" is scheduled — the final
-        // scroll position is what matters for visible pages.
-        _isLoadingPages = true;
+        _isLoadPending = true;
+
+        if (_isLoadInFlight) return;
+        _isLoadInFlight = true;
+
+        //Debug.WriteLine($"[INFO] IsLoadInFlight: {_isLoadInFlight}");
 
         try
         {
-            double zoom = scrollViewer.ZoomFactor;
-            double viewportHeight = scrollViewer.ViewportHeight;
-            double verticalOffset = scrollViewer.VerticalOffset;
+            while (_isLoadPending)
+            {
+                _isLoadPending = false;
 
-            int startIndex = FindPageByPosition(verticalOffset / zoom);
-            int endIndex = FindPageByPosition((verticalOffset + viewportHeight) / zoom);
+                var doc = _pdfDocument;
+                if (doc == null || doc.PageCount == 0) break;
 
-            startIndex = Math.Max(0, startIndex - 1);
-            endIndex = Math.Min(_pdfDocument.PageCount - 1, endIndex + 1);
+                var scrollViewer = PdfScrollViewer;
+                double zoom = scrollViewer.ZoomFactor;
+                if (zoom <= 0) break;
 
-            await LoadPagesAsync(startIndex, endIndex, zoom);
+                double viewportHeight = scrollViewer.ViewportHeight;
+                double verticalOffset = scrollViewer.VerticalOffset;
+
+                int startIndex = FindPageByPosition(verticalOffset / zoom);
+                int endIndex = FindPageByPosition((verticalOffset + viewportHeight) / zoom);
+
+                //Debug.WriteLine($"[LoadPage] startIndex: {startIndex}, endIndex: {endIndex}");
+
+                if (startIndex < 0 || endIndex < 0) break;
+
+                startIndex = Math.Max(0, startIndex - 1);
+                endIndex = Math.Min(_pdfDocument.PageCount - 1, endIndex + 1);
+                if (startIndex > endIndex) break;
+
+                //Debug.WriteLine($"[Load Page] Index: {startIndex} - {endIndex}");
+
+                try
+                {
+                    await LoadPagesAsync(startIndex, endIndex, zoom);
+
+                }
+                catch (Exception ex)
+                {
+                    //Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
+                    break;
+                }
+            }
         }
         finally
         {
-            _isLoadingPages = false;
+            _isLoadInFlight = false;
         }
     }
+
 
     /// <summary>
     /// Render full-page bitmaps for pages in [startIndex, endIndex] that haven't been
@@ -417,21 +495,30 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
         for (int i = startIndex; i <= endIndex; i++)
         {
+            if (_isUnloaded) return;
+            if (_pdfDocument == null) return;
+            if (i < 0 || i >= PdfPages.Count) return;
+
             int pageIndex = i;
             if (PdfPages[pageIndex].PageImage != null) continue;
-
             PdfPages[pageIndex].IsLoading = true;
 
             try
             {
                 var bitmap = await RenderBitmap(pageIndex, basicDpi);
+
+                if (_isUnloaded || _pdfDocument == null) return;
+                if (pageIndex >= PdfPages.Count) return;
+
                 PdfPages[pageIndex].PageImage = bitmap;
                 PdfPages[pageIndex].IsLoading = false;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to render page {pageIndex}: {ex.Message}");
-                PdfPages[pageIndex].IsLoading = false;
+                //Debug.WriteLine($"Failed to render page {pageIndex}: {ex.Message}");
+
+                if (pageIndex < PdfPages.Count)
+                    PdfPages[pageIndex].IsLoading = false;
             }
         }
 
@@ -463,6 +550,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// </summary>
     private async Task RenderPartialForSpecificPage(int pageIndex, double zoom, double dpi, Microsoft.UI.Xaml.Controls.Image targetImage)
     {
+        if (_isUnloaded || _pdfDocument == null) return;
+
         if (pageIndex < 0 || pageIndex >= PdfPages.Count)
         {
             targetImage.Visibility = Visibility.Collapsed;
@@ -515,6 +604,9 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         string currentFilePath = PdfPath;
         var rawBitmapData = await Task.Run(() => Native.PdfRenderer.RenderRegion(currentFilePath, pageIndex, renderRect, dpi));
 
+        if (_isUnloaded || _pdfDocument == null) return;
+        if (pageIndex >= PdfPages.Count) return;
+
         if (PdfPagesRepeater.TryGetElement(pageIndex) == null || rawBitmapData.Pixels == null || rawBitmapData.Pixels.Length == 0)
         {
             targetImage.Visibility = Visibility.Collapsed;
@@ -522,6 +614,9 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         }
 
         var particalBitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
+
+        if (_isUnloaded || _pdfDocument == null) return;
+        if (pageIndex >= PdfPages.Count) return;
 
         targetImage.Source = particalBitmap;
         targetImage.Width = renderRect.Width;
@@ -582,7 +677,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
             double pageBottom = (page.DocumentTop + page.PageHeight);
 
-            if (positionY >= page.DocumentTop && positionY < pageBottom)
+            //if ((positionY >= page.DocumentTop) && positionY < pageBottom)
+            if ((positionY > page.DocumentTop || MathHelper.IsClose(positionY, page.DocumentTop, 0.001)) && positionY < pageBottom)
             {
                 return mid;
             }

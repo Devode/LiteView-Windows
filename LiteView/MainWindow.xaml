@@ -33,10 +33,10 @@
             </TitleBar.IconSource>
             <TitleBar.Content>
                 <AutoSuggestBox x:Name="SearchBox"
+                                x:Uid="SearchBox"
                                 Width="360"
                                 VerticalAlignment="Center"
                                 CornerRadius="8"
-                                PlaceholderText="搜索"
                                 QueryIcon="Find"
                                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay}"
                                 ItemsSource="{x:Bind ViewModel.SuggestionItems, Mode=OneWay}"/>
@@ -52,8 +52,8 @@
             IsPaneToggleButtonVisible="False"
             SelectionChanged="navView_SelectionChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="PDF 列表" Icon="List" Tag="PdfListPage" />
-                <NavigationViewItem Content="PDF 阅读器" Tag="PdfViewerPage">
+                <NavigationViewItem x:Uid="NavigationViewItem_PdfList" Icon="List" Tag="PdfListPage" />
+                <NavigationViewItem x:Uid="NavigationViewItem_PdfViewer" Tag="PdfViewerPage">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE736;" />
                     </NavigationViewItem.Icon>

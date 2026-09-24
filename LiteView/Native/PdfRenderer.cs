@@ -20,7 +20,7 @@ namespace LiteView.Native
             float scale = (float)(dpi / 72f);
             int renderWidth = Math.Min((int)Math.Round(cropRect.Width * scale), MAX_PIXEL_WIDTH);
             float actualScale = (float)(renderWidth / cropRect.Width);
-            Debug.WriteLine($"scale: {scale}, actualScale: {actualScale}");
+            //Debug.WriteLine($"scale: {scale}, actualScale: {actualScale}");
 
             int bitmapW = Math.Max(1, (int)(cropRect.Width * actualScale));
             int bitmapH = Math.Max(1, (int)(cropRect.Height * actualScale));
@@ -87,7 +87,7 @@ namespace LiteView.Native
             float scale = (float)(dpi / 72.0);
             int renderWidth = Math.Min((int)Math.Round(pageWidth * scale), MAX_PIXEL_WIDTH);
             float actualScale = (float)(renderWidth / pageWidth);
-            Debug.WriteLine($"fullpage scale: {scale}, actualScale: {actualScale}");
+            //Debug.WriteLine($"fullpage scale: {scale}, actualScale: {actualScale}");
 
             int fullPageRenderW = Math.Max(1, (int)(pageWidth * actualScale));
             int fullPageRenderH = Math.Max(1, (int)(pageHeight * actualScale));

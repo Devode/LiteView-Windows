@@ -10,9 +10,10 @@
     xmlns:control="using:LiteView.Controls"
     mc:Ignorable="d">
 
-    <ScrollViewer x:Name="PdfScrollViewer" ZoomMode="Enabled" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+    <ScrollViewer x:Name="PdfScrollViewer" ZoomMode="Enabled"
+                  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                   HorizontalScrollMode="Enabled" VerticalScrollMode="Enabled"
-                  IsHorizontalRailEnabled="True" IsVerticalRailEnabled="True" IsScrollInertiaEnabled="True"
+                  IsHorizontalRailEnabled="False" IsVerticalRailEnabled="False" IsScrollInertiaEnabled="True"
                   ViewChanged="PdfScrollViewer_ViewChanged">
         <Grid x:Name="ViewerRootGrid">
             <ItemsRepeater x:Name="PdfPagesRepeater"
