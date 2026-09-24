@@ -124,7 +124,7 @@
                         Style="{StaticResource ToolbarButtonStyle}">
                     <FontIcon Glyph="&#xE76B;" FontSize="24" />
                 </Button>
-                <Button x:Name="PageBtn" Click="PageBtn_Click"
+                <Button x:Name="PageBtn" x:Uid="ToolBar_PageBtn" Click="PageBtn_Click"
                         Padding="8" Width="Auto" Style="{StaticResource ToolbarButtonStyle}">
                     <TextBlock>
                         <Run x:Uid="PageNumber" />
@@ -257,5 +257,65 @@
                 </StackPanel>
             </Border>
         </Grid>
+
+        <!-- 教程 -->
+        <TeachingTip x:Name="WelcomeTip"
+                     Title="欢迎使用 LiteView！"
+                     Subtitle="这是您的首次启动，让我带您快速了解阅读器各工具的用法。"
+                     IsOpen="False"
+                     PreferredPlacement="Center">
+            <TeachingTip.Content>
+                <TextBlock Margin="0,16,0,0" Text="若您是第一次使用，请务必仔细观看教程。" />
+            </TeachingTip.Content>
+        </TeachingTip>
+
+        <TeachingTip x:Name="SelectBtnTip"
+                     Title="“选择”工具"
+                     Subtitle="主要用于翻页（适用于触屏）"
+                     IsOpen="False"
+                     Target="{x:Bind BtnSelect}" />
+        <TeachingTip x:Name="PenBtnTip"
+                     Title="“画笔”工具"
+                     Subtitle="主要用于批注、绘画等。选中后单击此按钮可打开笔迹设置"
+                     IsOpen="False"
+                     Target="{x:Bind BtnPen}" />
+        <TeachingTip x:Name="EraserBtnTip"
+                     Title="“橡皮”工具"
+                     Subtitle="主要用于擦除“画笔”工具绘制的笔迹"
+                     IsOpen="False"
+                     Target="{x:Bind BtnEraser}" />
+        <TeachingTip x:Name="ClearBtnTip"
+                     Title="“清空”按钮"
+                     Subtitle="用于翻清除所有的“画笔”工具绘制的笔迹"
+                     IsOpen="False"
+                     Target="{x:Bind BtnClear}" />
+        
+        <TeachingTip x:Name="FitToWindowBtnTip"
+                     Title="“适应屏幕”按钮"
+                     Subtitle="用于将页面缩放到适合窗口的大小"
+                     IsOpen="False"
+                     Target="{x:Bind FitToWindow}" />
+        <TeachingTip x:Name="ZoomInBtnTip"
+                     Title="“放大”按钮"
+                     Subtitle="用于放大页面"
+                     IsOpen="False"
+                     Target="{x:Bind ZoomInBtn}" />
+        <TeachingTip x:Name="ZoomOutBtnTip"
+                     Title="“缩小”按钮"
+                     Subtitle="用于缩小页面"
+                     IsOpen="False"
+                     Target="{x:Bind ZoomOutBtn}" />
+        <TeachingTip x:Name="SettingsBtnTip"
+                     Title="“设置”按钮"
+                     Subtitle="用于配置阅读器的选项"
+                     IsOpen="False"
+                     Target="{x:Bind SettingsBtn}" />
+        
+        <TeachingTip x:Name="PageBtnTip"
+                     Title="“页码”按钮"
+                     Subtitle="用于显示当前页码，单击打开“跳转到指定页面”窗口"
+                     IsOpen="False"
+                     Target="{x:Bind PageBtn}" />
+        
     </Grid>
 </Page>

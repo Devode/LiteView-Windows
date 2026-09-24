@@ -87,6 +87,9 @@ namespace LiteView.Pages
 
         private bool _isPenBtnChecked;
 
+        private int _currentTipIndex = 0;
+        private TeachingTip[] _tips;
+
         public SolidColorBrush ToBrush(Color color) => new SolidColorBrush(color);
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -99,8 +102,19 @@ namespace LiteView.Pages
         {
             InitializeComponent();
 
+            Loaded += PdfViewerPage_Loaded;
             PdfViewer.PropertyChanged += PdfViewer_PropertyChanged;
             Unloaded += (s, e) => PdfViewer.PropertyChanged -= PdfViewer_PropertyChanged;
+        }
+
+        private void PdfViewerPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (!AppSettingsHelper.IsFirstRun) return;
+
+            WelcomeTip.IsOpen = true;
+            _tips = new[] { SelectBtnTip, PenBtnTip, EraserBtnTip, ClearBtnTip, FitToWindowBtnTip, ZoomInBtnTip, ZoomOutBtnTip, SettingsBtnTip, PageBtnTip };
+
+            WelcomeTip.Closed += (s, _) => ShowNextTip();
         }
 
         private void PdfViewer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -139,6 +153,25 @@ namespace LiteView.Pages
 
                 PdfViewer.PdfPath = pdfItem.FilePath;
             }
+        }
+
+        private void ShowNextTip()
+        {
+            if (_currentTipIndex >= _tips.Length)
+            {
+                AppSettingsHelper.MarkTutorialAsSeen();
+                return;
+            }
+
+            var tip = _tips[_currentTipIndex];
+            void OnClosed(TeachingTip sender, TeachingTipClosedEventArgs args)
+            {
+                sender.Closed -= OnClosed;
+                _currentTipIndex++;
+                ShowNextTip();
+            }
+            tip.Closed += OnClosed;
+            tip.IsOpen = true;
         }
 
         /// <summary>
