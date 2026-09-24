@@ -358,9 +358,14 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// </summary>
     private async void PdfScrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
     {
-        Debug.WriteLine($"[INFO] IsUnloaded: {_isUnloaded}");
-        Debug.WriteLine($"[INFO] Is CTS Null: {_cts == null}");
+        
+
+
+        //Debug.WriteLine($"[INFO] IsUnloaded: {_isUnloaded}");
+        //Debug.WriteLine($"[INFO] Is CTS Null: {_cts == null}");
         if (_isUnloaded) return;
+
+        //Debug.WriteLine($"[INFO] IsLoadInFlight: {_isLoadInFlight}");
         //if (_cts == null) return;
 
         var scrollViewer = (ScrollViewer)sender;
@@ -398,7 +403,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         catch (ObjectDisposedException) { return; }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ViewChanged] {ex.Message}");
+            //Debug.WriteLine($"[ViewChanged] {ex.Message}");
             return;
         }
 
@@ -408,7 +413,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
+            //Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
         }
     }
 
@@ -425,6 +430,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
         if (_isLoadInFlight) return;
         _isLoadInFlight = true;
+
+        //Debug.WriteLine($"[INFO] IsLoadInFlight: {_isLoadInFlight}");
 
         try
         {
@@ -444,11 +451,16 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
                 int startIndex = FindPageByPosition(verticalOffset / zoom);
                 int endIndex = FindPageByPosition((verticalOffset + viewportHeight) / zoom);
+
+                //Debug.WriteLine($"[LoadPage] startIndex: {startIndex}, endIndex: {endIndex}");
+
                 if (startIndex < 0 || endIndex < 0) break;
 
                 startIndex = Math.Max(0, startIndex - 1);
                 endIndex = Math.Min(_pdfDocument.PageCount - 1, endIndex + 1);
                 if (startIndex > endIndex) break;
+
+                //Debug.WriteLine($"[Load Page] Index: {startIndex} - {endIndex}");
 
                 try
                 {
@@ -457,7 +469,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
+                    //Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
                     break;
                 }
             }
@@ -503,7 +515,7 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to render page {pageIndex}: {ex.Message}");
+                //Debug.WriteLine($"Failed to render page {pageIndex}: {ex.Message}");
 
                 if (pageIndex < PdfPages.Count)
                     PdfPages[pageIndex].IsLoading = false;
@@ -665,7 +677,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
             double pageBottom = (page.DocumentTop + page.PageHeight);
 
-            if (positionY >= page.DocumentTop && positionY < pageBottom)
+            //if ((positionY >= page.DocumentTop) && positionY < pageBottom)
+            if ((positionY > page.DocumentTop || MathHelper.IsClose(positionY, page.DocumentTop, 0.001)) && positionY < pageBottom)
             {
                 return mid;
             }
