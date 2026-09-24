@@ -63,6 +63,17 @@
                         <ComboBoxItem x:Uid="Theme_Dark" Tag="Dark" />
                     </ComboBox>
                 </controls:SettingsCard>
+                <controls:SettingsCard x:Uid="Lang">
+                    <ComboBox x:Name="LanguageSetting"
+                              MinWidth="200"
+                              SelectionChangedTrigger="Committed"
+                              SelectionChanged="LanguageSetting_SelectionChanged"
+                              SelectedIndex="{x:Bind ViewModel.LanguageSetting, Mode=TwoWay}">
+                        <ComboBoxItem x:Uid="Language_UsingSystemSetting" Tag="Default" />
+                        <ComboBoxItem x:Uid="Language_zh_CN" Tag="zh-CN" />
+                        <ComboBoxItem x:Uid="Language_en_US" Tag="en-US" />
+                    </ComboBox>
+                </controls:SettingsCard>
 
                 <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" x:Uid="About" />
                 <controls:SettingsExpander Description="© 2026 Devode."
@@ -104,6 +115,14 @@
                 IsOpen="{x:Bind ViewModel.IsNetworkErrorInfoOpen, Mode=TwoWay}"
                 Message="{x:Bind ViewModel.NetworkErrorInfo, Mode=OneWay}"
                 Severity="Error" />
+            <InfoBar
+                x:Uid="RestartRequired"
+                IsOpen="{x:Bind ViewModel.IsRestartRequiredInfoOpen, Mode=TwoWay}"
+                Severity="Informational">
+                <InfoBar.ActionButton>
+                    <Button x:Uid="RestartNow" Command="{x:Bind ViewModel.RestartNowCommand}" />
+                </InfoBar.ActionButton>
+            </InfoBar>
         </StackPanel>
     </Grid>
 </Page>

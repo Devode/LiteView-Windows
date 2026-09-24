@@ -132,11 +132,20 @@
   <data name="Theme_UsingSystemSetting.Content" xml:space="preserve">
     <value>Use system setting</value>
   </data>
+  <data name="Language_UsingSystemSetting.Content" xml:space="preserve">
+    <value>Use system setting</value>
+  </data>
+  <data name="Language_zh_CN.Content" xml:space="preserve">
+    <value>简体中文</value>
+  </data>
   <data name="Theme.Description" xml:space="preserve">
     <value>Select which app theme to display</value>
   </data>
   <data name="Theme.Header" xml:space="preserve">
     <value>App Theme</value>
+  </data>
+  <data name="Lang.Header" xml:space="preserve">
+    <value>Language</value>
   </data>
   <data name="ModifiedDate.Text" xml:space="preserve">
     <value>Modified: </value>
@@ -218,5 +227,20 @@
   </data>
   <data name="MoreOptions.Content" xml:space="preserve">
     <value>More</value>
+  </data>
+  <data name="ToolBar_PageBtn.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Page number. Click to open the Jump to Page dialog.</value>
+  </data>
+  <data name="Language_en_US.Content" xml:space="preserve">
+    <value>English (US)</value>
+  </data>
+  <data name="RestartRequired.Title" xml:space="preserve">
+    <value>Restart required</value>
+  </data>
+  <data name="RestartRequired.Message" xml:space="preserve">
+    <value>Restart to apply this setting.</value>
+  </data>
+  <data name="RestartNow.Content" xml:space="preserve">
+    <value>Restart Now</value>
   </data>
 </root>

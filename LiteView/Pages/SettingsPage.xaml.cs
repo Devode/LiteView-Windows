@@ -74,5 +74,16 @@ namespace LiteView.Pages
                 //}
             }
         }
+
+        private void LanguageSetting_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+            if (LanguageSetting.SelectedItem is ComboBoxItem selectedItem)
+            {
+                string selectedLanguageString = selectedItem.Tag.ToString();
+
+                ViewModel.SwitchLanguageCommand.Execute(selectedLanguageString);
+            }
+        }
     }
 }

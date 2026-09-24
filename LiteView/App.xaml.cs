@@ -1,23 +1,24 @@
 ﻿using LiteView.Contracts;
 using LiteView.Helpers;
+using LiteView.Models;
+using LiteView.Pages;
 using LiteView.Services;
 using LiteView.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
+using Microsoft.Windows.Globalization;
 using System;
-using System.IO;
-using System.Net.Http;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
-using LiteView.Pages;
-using Microsoft.Windows.AppLifecycle;
-using System.Linq;
-using LiteView.Models;
-using Microsoft.Windows.Globalization;
-using System.Threading.Tasks;
+using Windows.System.UserProfile;
 
 namespace LiteView
 {
@@ -61,9 +62,32 @@ namespace LiteView
 
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            ApplicationLanguages.PrimaryLanguageOverride = "en-US";
 
+            //ApplicationLanguages.PrimaryLanguageOverride = "en-US";
+            InitLanguage();
             Init();
+        }
+
+        private void InitLanguage()
+        {
+            var lang = AppSettingsHelper.GetValue("AppLanguage");
+
+            string targetLang;
+
+            if (lang is string langt && !string.IsNullOrEmpty(langt))
+            {
+                Debug.WriteLine($"AppLanguage: {lang}");
+
+                var userLanguages = GlobalizationPreferences.Languages;
+
+                targetLang = langt == "Default" ? userLanguages[0] : langt;
+            }
+            else
+            {
+                var userLanguages = GlobalizationPreferences.Languages;
+                targetLang = userLanguages[0];
+            }
+            ApplicationLanguages.PrimaryLanguageOverride = targetLang;
         }
 
         /// <summary>
@@ -129,14 +153,10 @@ namespace LiteView
             // unobserved Task exception (same limitation as OnPdfPathChanged).
             _ = pdfService.LoadPdfDataAsync(PdfDataFilePath);
 
-            var localSettings = ApplicationData.Current.LocalSettings;
             ElementTheme themeToApply = ElementTheme.Default;
 
-            if (localSettings.Values.ContainsKey("AppTheme"))
-            {
-                var savedTheme = localSettings.Values["AppTheme"].ToString();
-                Enum.TryParse(savedTheme, out themeToApply);
-            }
+            var savedTheme = AppSettingsHelper.AppThemeTag;
+            Enum.TryParse(savedTheme, out themeToApply);
 
             _window = Host.Services.GetRequiredService<MainWindow>();
 
