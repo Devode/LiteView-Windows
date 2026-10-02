@@ -82,6 +82,15 @@
         <control:PdfViewerControl x:Name="PdfViewer"
                                   SimplifiedTolerance="{x:Bind StrokeSimplifiedTolerance, Mode=OneWay}"/>
 
+        <Button x:Name="TutorialBtn" Margin="12" 
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Top"
+                Click="TutorialBtn_Click">
+            <Button.Content>
+                <FontIcon Glyph="&#xE82F;" />
+            </Button.Content>
+        </Button>
+
         <Border VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="20" CornerRadius="20"
                 Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
                 Translation="0,0,16">

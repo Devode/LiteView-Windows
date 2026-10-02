@@ -327,6 +327,8 @@ namespace LiteView.Pages
 
             ContentDialog dialog = new ContentDialog
             {
+                Style = (Style)Application.Current
+                    .Resources["DefaultContentDialogStyle"],
                 Title = "Jump to page",
                 Content = panel,
                 PrimaryButtonText = "OK",
@@ -404,6 +406,15 @@ namespace LiteView.Pages
         {
             //PdfViewer.
             Debug.WriteLine(StrokeSimplifiedTolerance);
+        }
+
+        private void TutorialBtn_Click(object sender, RoutedEventArgs e)
+        {
+            WelcomeTip.IsOpen = true;
+            _tips = new[] { SelectBtnTip, PenBtnTip, EraserBtnTip, ClearBtnTip, FitToWindowBtnTip, ZoomInBtnTip, ZoomOutBtnTip, SettingsBtnTip, PageBtnTip };
+            _currentTipIndex = 0;
+
+            WelcomeTip.Closed += (s, _) => ShowNextTip();
         }
     }
 }

@@ -235,8 +235,9 @@ namespace LiteView.ViewModels
             catch (Exception ex)
             {
                 IsNetworkErrorInfoOpen = true;
-                NetworkErrorInfo = ResourceHelper.GetLocalizedString("NetworkError_Info", ex.Message);
+                NetworkErrorInfo = ResourceHelper.GetLocalizedString("NetworkError_Info", $"\nMessage: {ex.Message}\nInnerException: {ex.InnerException}");
                 Debug.WriteLine($"[CheckForUpdate] {ex.Message}");
+                Debug.WriteLine($"[CheckForUpdate] {ex.InnerException}");
             }
         }
 
