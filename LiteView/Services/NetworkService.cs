@@ -1,5 +1,4 @@
 ﻿using LiteView.Contracts;
-using LiteView.Models;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Net.Http;
