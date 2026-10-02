@@ -110,7 +110,15 @@ namespace LiteView
                 })
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddSingleton<HttpClient>(sp => new HttpClient());
+                    services.AddSingleton<HttpClient>(sp => 
+                    {
+                        var handler = new SocketsHttpHandler
+                        {
+                            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+                            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1)
+                        };
+                        return new HttpClient();
+                    });
 
                     // Services
                     services.AddSingleton<IPdfDataService, PdfDataService>();
