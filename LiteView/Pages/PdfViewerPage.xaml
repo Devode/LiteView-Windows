@@ -7,14 +7,15 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:control="using:LiteView.Controls"
+    xmlns:model="using:LiteView.Models" xmlns:viewmodels="using:LiteView.ViewModels" d:DataContext="{d:DesignInstance Type=viewmodels:PdfViewerViewModel}"
     mc:Ignorable="d">
 
     <Page.Resources>
         <!-- 极简工具栏按钮样式 -->
         <Style x:Key="ToolbarButtonStyle" TargetType="ButtonBase">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Width" Value="{x:Bind AplyButtonZoom(ButtonZoom), Mode=OneWay}"/> <!-- 原 48 -->
-            <Setter Property="Height" Value="{x:Bind AplyButtonZoom(ButtonZoom), Mode=OneWay}"/> <!-- 原 48 -->
+            <Setter Property="Width" Value="{x:Bind AplyButtonZoom(ViewModel.ButtonZoom), Mode=OneWay}"/> <!-- 原 48 -->
+            <Setter Property="Height" Value="{x:Bind AplyButtonZoom(ViewModel.ButtonZoom), Mode=OneWay}"/> <!-- 原 48 -->
             <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Template">
@@ -78,9 +79,9 @@
         </Style>
     </Page.Resources>
 
-    <Grid x:Name="PdfGrid">
+    <Grid x:Name="PdfGrid" SizeChanged="PdfGrid_SizeChanged">
         <control:PdfViewerControl x:Name="PdfViewer"
-                                  SimplifiedTolerance="{x:Bind StrokeSimplifiedTolerance, Mode=OneWay}"/>
+                                  SimplifiedTolerance="{x:Bind ViewModel.StrokeSimplifiedTolerance, Mode=OneWay}"/>
 
         <Button x:Name="TutorialBtn" Margin="12" 
                 HorizontalAlignment="Right" 
@@ -90,6 +91,8 @@
                 <FontIcon Glyph="&#xE82F;" />
             </Button.Content>
         </Button>
+
+        
 
         <Border VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="20" CornerRadius="20"
                 Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
@@ -119,36 +122,107 @@
 
             </Button>
         </Border>
-        
 
-        <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="20" CornerRadius="20"
-                Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
-                Translation="0,0,16">
-            <Border.Shadow>
-                <ThemeShadow />
-            </Border.Shadow>
-            
-            <StackPanel Orientation="Horizontal" Spacing="5">
-                <Button x:Name="PreviousPageBtn" Click="PreviousPageBtn_Click"
-                        Style="{StaticResource ToolbarButtonStyle}">
-                    <FontIcon Glyph="&#xE76B;" FontSize="24" />
-                </Button>
-                <Button x:Name="PageBtn" x:Uid="ToolBar_PageBtn" Click="PageBtn_Click"
-                        Padding="8" Width="Auto" Style="{StaticResource ToolbarButtonStyle}">
-                    <TextBlock>
-                        <Run x:Uid="PageNumber" />
-                        <!-- 显示当前页面页码，由代码控制文本 -->
-                        <Run x:Name="CurrentPageText" />
-                        <Run Text="/" />
-                        <Run x:Name="TotalPageText" />
-                    </TextBlock>
-                </Button>
-                <Button x:Name="NextPageBtn" Click="NextPageBtn_Click"
-                        Style="{StaticResource ToolbarButtonStyle}">
-                    <FontIcon Glyph="&#xE76C;" FontSize="24" />
-                </Button>
-            </StackPanel>
-        </Border>
+        <StackPanel Orientation="Vertical"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Right"
+                    Spacing="12">
+
+            <Border x:Name="ThumbnailPanel"
+                    Margin="0,0,20,0" CornerRadius="12"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                    Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}"
+                    Translation="0,0,16">
+
+                <Border.Shadow>
+                    <ThemeShadow />
+                </Border.Shadow>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Thumb Grid.Row="0"
+                           Height="12"
+                           DragDelta="Thumb_DragDelta">
+                        <Thumb.Template>
+                            <ControlTemplate TargetType="Thumb">
+                                <Grid Background="Transparent">
+                                    <Rectangle Width="36" Height="4"
+                                               RadiusX="2" RadiusY="2"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"
+                                               Fill="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </Grid>
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
+
+                    <StackPanel Grid.Row="1" Orientation="Vertical"
+                                Margin="8"
+                                Spacing="8">
+                        <ListView x:Name="ThumbnailList" Height="{Binding ThumbnailHeight}"
+                                  ContainerContentChanging="ThumbnailList_ContainerContentChanging"
+                                  SelectionChanged="ThumbnailList_SelectionChanged">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="model:PageItem">
+                                    <Border Margin="12"
+                                            Width="{x:Bind PageWidth}" Height="{x:Bind PageHeight}"
+                                            Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}"
+                                            Padding="12">
+                                        <StackPanel Orientation="Vertical" Background="Transparent"
+                                                    Spacing="4">
+                                            <TextBlock Text="{x:Bind PageNumber}" />
+                                            <Image Source="{x:Bind PageImage, Mode=OneWay}"
+                                                   Stretch="Uniform"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <TextBox x:Name="PageNumberTextBox" Grid.Column="0"
+                                 Text="{Binding CurrentPageNumberTextBoxText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 PlaceholderText="输入页码"
+                                 TextChanged="PageNumberTextBox_TextChanged"
+                                 KeyDown="PageNumberTextBox_KeyDown"/>
+                    </StackPanel>
+
+                    
+                </Grid>
+            </Border>
+
+            <Border x:Name="PageController" Margin="0,0,20,20" HorizontalAlignment="Right" VerticalAlignment="Bottom" CornerRadius="20"
+                    Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
+                    Translation="0,0,16">
+                <Border.Shadow>
+                    <ThemeShadow />
+                </Border.Shadow>
+
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Button x:Name="PreviousPageBtn" Click="PreviousPageBtn_Click"
+                            Style="{StaticResource ToolbarButtonStyle}">
+                        <FontIcon Glyph="&#xE76B;" FontSize="24" />
+                    </Button>
+                    <Button x:Name="PageBtn" x:Uid="ToolBar_PageBtn" Click="PageBtn_Click"
+                            Padding="8" Width="Auto" Style="{StaticResource ToolbarButtonStyle}">
+                        <TextBlock>
+                            <Run x:Uid="PageNumber" />
+                            <!-- 显示当前页面页码，由代码控制文本 -->
+                            <Run Text="{Binding CurrentPageIndex}" />
+                            <Run Text="/" />
+                            <Run Text="{Binding PageCount}" />
+                        </TextBlock>
+                    </Button>
+                    <Button x:Name="NextPageBtn" Click="NextPageBtn_Click"
+                            Style="{StaticResource ToolbarButtonStyle}">
+                        <FontIcon Glyph="&#xE76C;" FontSize="24" />
+                    </Button>
+                </StackPanel>
+            </Border>
+        </StackPanel>
 
         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20">
             <Border Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" CornerRadius="20" Padding="8,4" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
@@ -164,12 +238,12 @@
                         <ToggleButton x:Name="BtnSelect" x:Uid="Toolbar_Select" Click="ToolButton_Click" IsChecked="True"
                                       Style="{StaticResource ToolbarButtonStyle}">
                             <!-- 鼠标指针 -->
-                            <FontIcon Glyph="&#xE8B0;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/> <!-- 原FontSize = 14 -->
+                            <FontIcon Glyph="&#xE8B0;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/> <!-- 原FontSize = 14 -->
                         </ToggleButton>
                         <ToggleButton x:Name="BtnPen" x:Uid="Toolbar_Pen" Click="ToolButton_Click"
                                       Style="{StaticResource ToolbarButtonStyle}">
                             <!-- 铅笔 -->
-                            <FontIcon Glyph="&#xE70F;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE70F;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/>
 
                             <!-- 画笔设置 -->
                             <FlyoutBase.AttachedFlyout>
@@ -178,15 +252,15 @@
                                         <Slider x:Name="StrokeThicknessSlider" x:Uid="StrokeThickness" 
                                                 Minimum="0.1" Maximum="24" StepFrequency="0.1" 
                                                 ValueChanged="StrokeThicknessSlider_ValueChanged" 
-                                                Value="{x:Bind StrokeThickness, Mode=TwoWay}" />
+                                                Value="{x:Bind ViewModel.StrokeThickness, Mode=TwoWay}" />
 
                                         <StackPanel Orientation="Vertical" Spacing="12">
                                             <TextBlock x:Uid="PenColor"/>
                                             <SplitButton x:Name="PickColorBtn">
-                                                <Border x:Name="CurrentColor" Width="32" Height="32" Background="{x:Bind ToBrush(PenColor), Mode=OneWay}" CornerRadius="4,0,0,4"/>
+                                                <Border x:Name="CurrentColor" Width="32" Height="32" Background="{x:Bind ToBrush(ViewModel.PenColor), Mode=OneWay}" CornerRadius="4,0,0,4"/>
                                                 <SplitButton.Flyout>
                                                     <Flyout Placement="Bottom">
-                                                        <ColorPicker x:Name="PenColorPicker" Color="Red" ColorChanged="PenColorPicker_ColorChanged" />
+                                                        <ColorPicker x:Name="PenColorPicker" Color="{x:Bind ViewModel.PenColor, Mode=TwoWay}" ColorChanged="PenColorPicker_ColorChanged" />
                                                     </Flyout>
                                                 </SplitButton.Flyout>
                                             </SplitButton>
@@ -200,12 +274,12 @@
                         <ToggleButton x:Name="BtnEraser" x:Uid="Toolbar_Eraser" Click="ToolButton_Click"
                                       Style="{StaticResource ToolbarButtonStyle}">
                             <!-- 橡皮 -->
-                            <FontIcon Glyph="&#xED60;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xED60;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/>
                         </ToggleButton>
                         <Button x:Name="BtnClear" x:Uid="Toolbar_Clear" Click="BtnClear_Click"
                                 Style="{StaticResource ToolbarButtonStyle}">
                             <!-- 垃圾桶 -->
-                            <FontIcon Glyph="&#xE74D;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE74D;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/>
                         </Button>
                     </StackPanel>
 
@@ -216,22 +290,22 @@
                     <StackPanel Orientation="Horizontal" Spacing="2">
                         <Button x:Name="FitToWindow" x:Uid="Toolbar_FitToWindow" Click="FitToWindow_Click"
                                 Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE740;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE740;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/>
                         </Button>
                         <Button x:Name="ZoomInBtn" x:Uid="Toolbar_ZoomIn" Click="ZoomInBtn_Click"
                                 Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE8A3;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE8A3;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/>
                         </Button>
                         <Button x:Name="ZoomOutBtn" x:Uid="Toolbar_ZoomOut" Click="ZoomOutBtn_Click"
                                 Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE71F;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE71F;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/>
                         </Button>
                         <Button x:Name="SettingsBtn" x:Uid="Toolbar_Settings" Style="{StaticResource ToolbarButtonStyle}">
-                            <FontIcon Glyph="&#xE713;" FontSize="{x:Bind ButtonZoom, Mode=OneWay}"/>
+                            <FontIcon Glyph="&#xE713;" FontSize="{x:Bind ViewModel.ButtonZoom, Mode=OneWay}"/>
                             <Button.Flyout>
                                 <Flyout Placement="BottomEdgeAlignedRight">
                                     <StackPanel Spacing="12" MinWidth="200">
-                                        <Slider x:Uid="ToolBarZoom" Minimum="8" Maximum="64" StepFrequency="0.1" Value="{x:Bind ButtonZoom, Mode=TwoWay}" />
+                                        <Slider x:Uid="ToolBarZoom" Minimum="8" Maximum="64" StepFrequency="0.1" Value="{x:Bind ViewModel.ButtonZoom, Mode=TwoWay}" />
 
                                         <!-- <Slider x:Name="StrokeThicknessSlider" x:Uid="StrokeThickness" Minimum="0.1" Maximum="24" StepFrequency="0.1" ValueChanged="StrokeThicknessSlider_ValueChanged" Value="{x:Bind StrokeThickness, Mode=TwoWay}" /> -->
 
@@ -251,7 +325,7 @@
                                             <Button.Flyout>
                                                 <Flyout>
                                                     <StackPanel Spacing="12" MinWidth="200">
-                                                        <Slider x:Uid="StrokeSimplifiedTolerance" Minimum="0" Maximum="16" StepFrequency="0.1" Value="{x:Bind StrokeSimplifiedTolerance, Mode=TwoWay}" MinWidth="100"
+                                                        <Slider x:Uid="StrokeSimplifiedTolerance" Minimum="0" Maximum="16" StepFrequency="0.1" Value="{x:Bind ViewModel.StrokeSimplifiedTolerance, Mode=TwoWay}" MinWidth="100"
                                                                 VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Flyout>

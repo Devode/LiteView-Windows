@@ -127,10 +127,13 @@ namespace LiteView
                     services.AddSingleton<IMessageDialogService, MessageDialogService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IFilePickerService, FilePickerService>();
+                    services.AddSingleton<IPdfRenderService, PdfRenderService>();
+                    services.AddSingleton<IPdfService, PdfService>();
 
                     // ViewModels
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<PdfListViewModel>();
+                    services.AddTransient<PdfViewerViewModel>();
                     services.AddTransient<SettingsViewModel>();
 
                     // Pages
