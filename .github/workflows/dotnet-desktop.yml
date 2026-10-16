@@ -73,14 +73,17 @@ jobs:
 
       - name: Locate MSIX
         id: locate
+        shell: pwsh
         run: |
-          $msix = Get-ChildItem "${{ github.workspace }}\AppPackages\*.msix" | Select-Object -First 1
+          $msix = Get-ChildItem "D:\a\LiteView-Windows\LiteView-Windows\AppPackages" `
+            -Recurse -Filter *.msix | Select-Object -First 1
           if (-not $msix) {
             Write-Error "未找到构建产出的 MSIX 文件，请检查构建步骤是否成功"
             exit 1
           }
+          # 输出完整路径，供后续步骤使用
           echo "MSIX_PATH=$($msix.FullName)" >> $env:GITHUB_OUTPUT
-          echo "MSIX_NAME=$($msix.Name)" >> $env:GITHUB_OUTPUT
+          echo "MSIX_NAME=$($msix.Name)"     >> $env:GITHUB_OUTPUT
           Write-Host "发现 MSIX：$($msix.FullName)"
 
       - name: Verify MSIX is Unsigned
