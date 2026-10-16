@@ -7,7 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:control="using:LiteView.Controls"
-    xmlns:model="using:LiteView.Models" xmlns:viewmodels="using:LiteView.ViewModels" d:DataContext="{d:DesignInstance Type=viewmodels:PdfViewerViewModel}"
+    xmlns:model="using:LiteView.Models"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -163,7 +163,7 @@
                     <StackPanel Grid.Row="1" Orientation="Vertical"
                                 Margin="8"
                                 Spacing="8">
-                        <ListView x:Name="ThumbnailList" Height="{Binding ThumbnailHeight}"
+                        <ListView x:Name="ThumbnailList" Height="{x:Bind ViewModel.ThumbnailHeight, Mode=OneWay}"
                                   ContainerContentChanging="ThumbnailList_ContainerContentChanging"
                                   SelectionChanged="ThumbnailList_SelectionChanged">
                             <ListView.ItemTemplate>
@@ -184,7 +184,7 @@
                         </ListView>
 
                         <TextBox x:Name="PageNumberTextBox" Grid.Column="0"
-                                 Text="{Binding CurrentPageNumberTextBoxText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Text="{x:Bind ViewModel.CurrentPageNumberTextBoxText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  PlaceholderText="输入页码"
                                  TextChanged="PageNumberTextBox_TextChanged"/>
                     </StackPanel>
@@ -210,9 +210,9 @@
                         <TextBlock>
                             <Run x:Uid="PageNumber" />
                             <!-- 显示当前页面页码，由代码控制文本 -->
-                            <Run Text="{Binding CurrentPageIndex}" />
+                            <Run Text="{x:Bind ViewModel.CurrentPageIndex, Mode=OneWay}" />
                             <Run Text="/" />
-                            <Run Text="{Binding PageCount}" />
+                            <Run Text="{x:Bind ViewModel.PageCount, Mode=OneWay}" />
                         </TextBlock>
                     </Button>
                     <Button x:Name="NextPageBtn" Click="NextPageBtn_Click"
