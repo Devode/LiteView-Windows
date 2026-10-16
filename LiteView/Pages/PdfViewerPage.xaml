@@ -186,8 +186,7 @@
                         <TextBox x:Name="PageNumberTextBox" Grid.Column="0"
                                  Text="{Binding CurrentPageNumberTextBoxText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  PlaceholderText="输入页码"
-                                 TextChanged="PageNumberTextBox_TextChanged"
-                                 KeyDown="PageNumberTextBox_KeyDown"/>
+                                 TextChanged="PageNumberTextBox_TextChanged"/>
                     </StackPanel>
 
                     
