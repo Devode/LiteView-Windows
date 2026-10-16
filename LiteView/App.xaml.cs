@@ -110,7 +110,15 @@ namespace LiteView
                 })
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddSingleton<HttpClient>(sp => new HttpClient());
+                    services.AddSingleton<HttpClient>(sp => 
+                    {
+                        var handler = new SocketsHttpHandler
+                        {
+                            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+                            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1)
+                        };
+                        return new HttpClient();
+                    });
 
                     // Services
                     services.AddSingleton<IPdfDataService, PdfDataService>();
@@ -119,10 +127,13 @@ namespace LiteView
                     services.AddSingleton<IMessageDialogService, MessageDialogService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IFilePickerService, FilePickerService>();
+                    services.AddSingleton<IPdfRenderService, PdfRenderService>();
+                    services.AddSingleton<IPdfService, PdfService>();
 
                     // ViewModels
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<PdfListViewModel>();
+                    services.AddTransient<PdfViewerViewModel>();
                     services.AddTransient<SettingsViewModel>();
 
                     // Pages

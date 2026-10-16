@@ -1,5 +1,6 @@
 ﻿using LiteView.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Threading.Tasks;
@@ -24,6 +25,8 @@ namespace LiteView.Services
             var window = _serviceProvider.GetRequiredService<MainWindow>();
             var dialog = new ContentDialog
             {
+                Style = (Style)Application.Current
+                    .Resources["DefaultContentDialogStyle"],
                 Title = title,
                 Content = content,
                 PrimaryButtonText = primaryText,

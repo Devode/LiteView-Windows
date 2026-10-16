@@ -36,6 +36,7 @@
                                 x:Uid="SearchBox"
                                 Width="360"
                                 VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
                                 CornerRadius="8"
                                 QueryIcon="Find"
                                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay}"

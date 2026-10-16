@@ -1,14 +1,11 @@
-using CommunityToolkit.WinUI;
+using LiteView.Contracts;
+using LiteView.EventArguments;
 using LiteView.Helpers;
 using LiteView.Models;
-using LiteView.Native;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.UI.Xaml.Navigation;
 using PdfiumViewer;
 using System;
 using System.Collections.Generic;
@@ -19,7 +16,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Windows.Foundation;
 
 namespace LiteView.Controls;
@@ -48,6 +44,8 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
             }
         }
     }
+    private int _currentPageIndex = 0;
+
     /// <summary>Total number of pages in the loaded PDF.</summary>
     public int PageCount
     {
@@ -61,21 +59,17 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
             }
         }
     }
-
-    private int _currentPageIndex = 0;
     private int _pageCount = 0;
 
-    private PdfDocument _pdfDocument;
     private double _lastScrollingVerticalOffset = 0;
     private double _lastScrollingHorizontalOffset = 0;
     private bool _isLoadInFlight = false;
     private bool _isLoadPending = false;
-    private bool _isUnloaded = false;
 
     /// <summary>Maps page index to cumulative Y offset from the top of the document.</summary>
     private Dictionary<int, double> _pageToTopDistances = new();
 
-    private double _averagePageHeight = 0;
+    private readonly IPdfService _pdfService;
 
     private CancellationTokenSource? _cts;
 
@@ -96,18 +90,16 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// <summary>View models for every page in the document. Bound to an ItemsRepeater.</summary>
     public List<PdfPageViewModel> PdfPages { get; set; } = new();
 
+    public event EventHandler<PdfCurrentPageChangedEventArgs>? PdfCurrentPageChanged;
+
     /// <summary>Path to the PDF file. Setting this triggers a full reload.</summary>
     public string PdfPath
     {
         get { return (string)GetValue(PdfPathProperty); }
         set { SetValue(PdfPathProperty, value); }
     }
-
     public static readonly DependencyProperty PdfPathProperty = DependencyProperty.Register(
         "PdfPath", typeof(string), typeof(PdfViewerControl), new PropertyMetadata(null, OnPdfPathChanged));
-
-    public event PropertyChangedEventHandler PropertyChanged;
-    protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
     /// <summary>Current zoom factor applied to the ScrollViewer.</summary>
     public float ViewerZoom
@@ -138,12 +130,18 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         }
     }
     public static readonly DependencyProperty SimplifiedToleranceProperty = DependencyProperty.Register(
-        "SimplifiedTolerance", typeof(float), typeof(PdfViewerControl), new PropertyMetadata(null));
+        "SimplifiedTolerance", typeof(float), typeof(PdfViewerControl), new PropertyMetadata(0f));
+
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
 
     public PdfViewerControl()
     {
         InitializeComponent();
         Unloaded += PdfViewerControl_Unloaded;
+
+        _pdfService = App.Host!.Services.GetRequiredService<IPdfService>();
     }
 
     /// <summary>
@@ -156,15 +154,13 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     private void PdfViewerControl_Unloaded(object sender, RoutedEventArgs e)
     {
         Debug.WriteLine($"[INFO] PdfViewerControl Unloaded");
-        _isUnloaded = true;
+        _pdfService.ClosePdf();
 
         var cts = _cts;
         _cts = null;
         try { cts?.Cancel(); } catch { }
         try { cts?.Dispose(); } catch { }
 
-        try { _pdfDocument?.Dispose(); } catch { }
-        _pdfDocument = null;
         PdfPages.Clear();
         PdfPagesRepeater.ItemsSource = null;
     }
@@ -209,21 +205,21 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     /// </summary>
     private async Task InitializePdf(string pdfPath)
     {
-        _isUnloaded = false;
-        _pdfDocument?.Dispose();
+        //_isUnloaded = false;
+        //_pdfDocument?.Dispose();
         PdfPages.Clear();
         _pageToTopDistances.Clear();
         PdfPagesRepeater.ItemsSource = null;
 
-        _pdfDocument = PdfDocument.Load(pdfPath);
+        //_pdfDocument = PdfDocument.Load(pdfPath);
 
-        _averagePageHeight = _pdfDocument.PageSizes.Average(size => size.Height);
-        PageCount = _pdfDocument.PageCount;
+        //_averagePageHeight = _pdfDocument.PageSizes.Average(size => size.Height);
+        PageCount = _pdfService.PageCount;
 
         double cumulativeTop = 0;
-        for (int i = 0; i < _pdfDocument.PageCount; i++)
+        for (int i = 0; i < PageCount; i++)
         {
-            var pageSize = _pdfDocument.PageSizes[i];
+            var pageSize = _pdfService.PageSizes[i];
 
             PdfPages.Add(new PdfPageViewModel
             {
@@ -240,8 +236,317 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         }
         PdfPagesRepeater.ItemsSource = PdfPages;
 
-        await LoadPagesAsync(0, Math.Min(2, _pdfDocument.PageCount - 1), 1);
+        CurrentPageIndex = 0;
+        PdfCurrentPageChanged?.Invoke(this, new PdfCurrentPageChangedEventArgs(CurrentPageIndex));
+        await RenderPagesAsync(0, Math.Min(2, PageCount - 1), 1);
     }
+
+    /// <summary>
+    /// Scroll-changed handler with debounce. On each scroll:
+    /// 1. Update CurrentPageIndex based on viewport center.
+    /// 2. Cancel any pending load, then wait LOAD_DEBOUNCE_MS.
+    /// 3. Load pages within the visible range +/- 1 page.
+    /// The debounce prevents redundant renders during fast fling gestures.
+    /// </summary>
+    private async void PdfScrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+    {
+        if (_pdfService.IsUnloaded) return;
+
+        var scrollViewer = (ScrollViewer)sender;
+
+        double viewportHeight = scrollViewer.ViewportHeight;
+        double verticalOffset = scrollViewer.VerticalOffset;
+        double horizontalOffset = scrollViewer.HorizontalOffset;
+
+        if (Math.Abs(verticalOffset - _lastScrollingVerticalOffset) < 10 && 
+            Math.Abs(horizontalOffset - _lastScrollingHorizontalOffset) < 10) 
+            return;
+
+        _lastScrollingVerticalOffset = verticalOffset; 
+        _lastScrollingHorizontalOffset = horizontalOffset;
+
+        double centerPointY = verticalOffset + (viewportHeight / 2.0);
+        int centerPageIndex = FindPage(centerPointY / scrollViewer.ZoomFactor);
+
+        if (centerPageIndex >= 0 && centerPageIndex < PageCount)
+        {
+            CurrentPageIndex = centerPageIndex;
+
+            PdfCurrentPageChanged?.Invoke(this, new PdfCurrentPageChangedEventArgs(centerPageIndex));
+        }
+
+        var oldCts = _cts;
+        var newCts = new CancellationTokenSource();
+        _cts = newCts;
+        try { oldCts?.Cancel(); oldCts?.Dispose(); } catch { }
+
+        try
+        {
+            await Task.Delay(LOAD_DEBOUNCE_MS, newCts.Token);
+            await RequestLoadAsync(newCts.Token);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (ObjectDisposedException) { return; }
+        catch (Exception ex)
+        {
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Requests a page load. Multiple calls are collapsed: while a load is in
+    /// flight, subsequent calls set a pending flag; when the current pass
+    /// completes, the loop re-reads the ScrollViewer state and renders the
+    /// latest visible range (latest-wins).
+    /// </summary>
+    /// <returns></returns>
+    private async Task RequestLoadAsync(CancellationToken ct)
+    {
+        _isLoadPending = true;
+
+        if (_isLoadInFlight) return;
+        _isLoadInFlight = true;
+
+        try
+        {
+            while (_isLoadPending)
+            {
+                _isLoadPending = false;
+
+                if (_pdfService.IsUnloaded || PageCount == 0) break;
+
+                var scrollViewer = PdfScrollViewer;
+                double zoom = scrollViewer.ZoomFactor;
+                if (zoom <= 0) break;
+
+                double viewportHeight = scrollViewer.ViewportHeight;
+                double verticalOffset = scrollViewer.VerticalOffset;
+
+                int startIndex = FindPage(verticalOffset / zoom);
+                int endIndex = FindPage((verticalOffset + viewportHeight) / zoom);
+
+                if (startIndex < 0 || endIndex < 0) break;
+
+                startIndex = Math.Max(0, startIndex - 1);
+                endIndex = Math.Min(PageCount - 1, endIndex + 1);
+                if (startIndex > endIndex) break;
+
+                try
+                {
+                    await RenderPagesAsync(startIndex, endIndex, zoom, ct);
+
+                }
+                catch (Exception ex)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            _isLoadInFlight = false;
+        }
+    }
+
+
+    /// <summary>
+    /// Render full-page bitmaps for pages in [startIndex, endIndex] that haven't been
+    /// rendered yet, then render viewport-cropped high-DPI overlays for the top and
+    /// bottom visible pages.
+    /// </summary>
+    private async Task RenderPagesAsync(int startIndex, int endIndex, double zoom, CancellationToken ct = default)
+    {
+        // Target dpi for RenderPartialForSpecificPage
+        double basicDpi = Math.Min(GetDeviceDpi(PdfScrollViewer), MAX_BASIC_DPI);
+        double targetDpi = Math.Min(GetDeviceDpi(PdfScrollViewer) * zoom, MAX_DPI);
+        Debug.WriteLine(targetDpi);
+
+        for (int i = startIndex; i <= endIndex; i++)
+        {
+            if (_pdfService.IsUnloaded) return;
+            if (i < 0 || i >= PdfPages.Count) return;
+
+            int pageIndex = i;
+            if (PdfPages[pageIndex].PageImage != null) continue;
+            PdfPages[pageIndex].IsLoading = true;
+
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                var bitmap = await RenderFullPageAsync(pageIndex, basicDpi, ct);
+
+                if (_pdfService.IsUnloaded) return;
+                if (pageIndex >= PdfPages.Count) return;
+
+                PdfPages[pageIndex].PageImage = bitmap;
+                PdfPages[pageIndex].IsLoading = false;
+            }
+            catch (Exception ex)
+            {
+                if (pageIndex < PdfPages.Count)
+                    PdfPages[pageIndex].IsLoading = false;
+            }
+        }
+
+        int topPageIndex = FindPage(PdfScrollViewer.VerticalOffset / zoom);
+        int bottomPageIndex = FindPage((PdfScrollViewer.VerticalOffset + PdfScrollViewer.ViewportHeight) / zoom);
+
+        await RenderPartialForSpecificPageAsync(topPageIndex, zoom, targetDpi, ParticalImageTop, ct);
+        if (bottomPageIndex != topPageIndex) await RenderPartialForSpecificPageAsync(bottomPageIndex, zoom, targetDpi, ParticalImageBottom, ct);
+        else ParticalImageBottom.Visibility = Visibility.Collapsed;
+    }
+
+
+    #region RenderPage
+
+    /// <summary>
+    /// Rasterize a single page at the given DPI and return the assembled WriteableBitmap.
+    /// Uses native PDFium via PdfRenderer.RenderFullPage.
+    /// </summary>
+    private async Task<WriteableBitmap> RenderFullPageAsync(int pageIndex, double dpi, CancellationToken ct)
+    {
+        var rawBitmapData = await _pdfService.RenderFullPageAsync(pageIndex, dpi, ct);
+        var bitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
+
+        return bitmap;
+    }
+
+    /// <summary>
+    /// Render a viewport-cropped region of the given page at high DPI.
+    /// The crop rectangle is the intersection of the ScrollViewer's visible area
+    /// with the page bounds, ensuring we only rasterize what the user can actually see.
+    /// The result is positioned as an overlay image on top of the base full-page bitmap.
+    /// </summary>
+    private async Task RenderPartialForSpecificPageAsync(int pageIndex, double zoom, double dpi, Image targetImage, CancellationToken ct)
+    {
+        if (_pdfService.IsUnloaded) return;
+
+        if (pageIndex < 0 || pageIndex >= PdfPages.Count)
+        {
+            targetImage.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var pageContainer = PdfPagesRepeater.TryGetElement(pageIndex) as FrameworkElement;
+        if (pageContainer == null)
+        {
+            targetImage.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        Windows.Foundation.Point visibleTopLeft;
+        try
+        {
+            var viewportToPage = PdfScrollViewer.TransformToVisual(pageContainer);
+            visibleTopLeft = viewportToPage.TransformPoint(new Windows.Foundation.Point(0, 0));
+        }
+        catch
+        {
+            targetImage.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        Rect visibleRectInPage = new Rect(
+            Math.Max(0, visibleTopLeft.X),
+            Math.Max(0, visibleTopLeft.Y),
+            PdfScrollViewer.ViewportWidth / zoom,
+            PdfScrollViewer.ViewportHeight / zoom
+        );
+
+        var pageVm = PdfPages[pageIndex];
+        Rect pageBounds = new Rect(0, 0, pageVm.PageWidth, pageVm.PageHeight);
+        visibleRectInPage.Intersect(pageBounds);
+
+        if (visibleRectInPage.Width <= 0 || visibleRectInPage.Height <= 0)
+        {
+            targetImage.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        Rect renderRect = new Rect(
+            visibleRectInPage.X,
+            visibleRectInPage.Y,
+            visibleRectInPage.Width,
+            visibleRectInPage.Height
+        );
+
+        string currentFilePath = PdfPath;
+        var rawBitmapData = await Task.Run(() => _pdfService.RenderRegionAsync(pageIndex, renderRect, dpi, ct));
+
+        if (_pdfService.IsUnloaded) return;
+        if (pageIndex >= PdfPages.Count) return;
+
+        if (PdfPagesRepeater.TryGetElement(pageIndex) == null || rawBitmapData.Pixels == null || rawBitmapData.Pixels.Length == 0)
+        {
+            targetImage.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var particalBitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
+
+        if (_pdfService.IsUnloaded) return;
+        if (pageIndex >= PdfPages.Count) return;
+
+        targetImage.Source = particalBitmap;
+        targetImage.Width = renderRect.Width;
+        targetImage.Height = renderRect.Height;
+
+        // Canvas.GetTop returns NaN if no explicit top is set (e.g., before layout).
+        // NaN > 0 evaluates to false, so the fallback ActualOffset.Y kicks in.
+        // This handles the case where pageContainer hasn't been positioned yet by Canvas yet.
+        double pageOffsetY = Canvas.GetTop(pageContainer) > 0 
+            ? Canvas.GetTop(pageContainer) 
+            : pageContainer.ActualOffset.Y;
+
+        // Same NaN-fallback pattern for X offset.
+        double pageOffsetX = Canvas.GetLeft(pageContainer) > 0
+            ? Canvas.GetLeft(pageContainer)
+            : pageContainer.ActualOffset.X;
+
+        Canvas.SetLeft(targetImage, pageOffsetX + renderRect.X);
+        Canvas.SetTop(targetImage, pageOffsetY + renderRect.Y);
+
+        targetImage.Visibility = Visibility.Visible;
+    }
+
+    #endregion
+
+
+    /// <summary>
+    /// Calculate offsets to keep the viewport center point fixed when changing zoom level.
+    /// </summary>
+    private (double NewHorizontalOffset, double NewVerticalOffset) ZoomAtViewportCenter(double oldZoom, double newZoom)
+    {
+        var horizontalOffset = PdfScrollViewer.HorizontalOffset;
+        var verticalOffset = PdfScrollViewer.VerticalOffset;
+
+        var viewportWidth = PdfScrollViewer.ViewportWidth;
+        var viewportHeight = PdfScrollViewer.ViewportHeight;
+
+        double centerY = (verticalOffset + (viewportHeight / 2.0)) / oldZoom;
+        double centerX = (horizontalOffset + (viewportWidth / 2.0)) / oldZoom;
+
+        var newVerticalOffset = centerY * newZoom - viewportHeight / 2;
+        var newHorizontalOffset = centerX * newZoom - viewportWidth / 2;
+
+        return (newHorizontalOffset, newVerticalOffset);
+    }
+
+    private int FindPage(double positionY)
+    {
+        return MathHelper.FindPageByPosition(PdfPages, positionY);
+    }
+
+    private float GetDeviceDpi(UIElement element)
+    {
+        if (element.XamlRoot == null) return 96f;
+
+        return 96f * (float)element.XamlRoot.RasterizationScale;
+    }
+
+
+    #region Public Methods
 
     public void PreviousPage()
     {
@@ -347,361 +652,5 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         PdfScrollViewer.VerticalScrollMode = isEnabled ? ScrollMode.Enabled : ScrollMode.Disabled;
     }
 
-    
-
-    /// <summary>
-    /// Scroll-changed handler with debounce. On each scroll:
-    /// 1. Update CurrentPageIndex based on viewport center.
-    /// 2. Cancel any pending load, then wait LOAD_DEBOUNCE_MS.
-    /// 3. Load pages within the visible range +/- 1 page.
-    /// The debounce prevents redundant renders during fast fling gestures.
-    /// </summary>
-    private async void PdfScrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
-    {
-        
-
-
-        //Debug.WriteLine($"[INFO] IsUnloaded: {_isUnloaded}");
-        //Debug.WriteLine($"[INFO] Is CTS Null: {_cts == null}");
-        if (_isUnloaded) return;
-
-        //Debug.WriteLine($"[INFO] IsLoadInFlight: {_isLoadInFlight}");
-        //if (_cts == null) return;
-
-        var scrollViewer = (ScrollViewer)sender;
-
-        double viewportHeight = scrollViewer.ViewportHeight;
-        double verticalOffset = scrollViewer.VerticalOffset;
-        double horizontalOffset = scrollViewer.HorizontalOffset;
-
-        if (Math.Abs(verticalOffset - _lastScrollingVerticalOffset) < 10 && 
-            Math.Abs(horizontalOffset - _lastScrollingHorizontalOffset) < 10) 
-            return;
-
-        _lastScrollingVerticalOffset = verticalOffset; 
-        _lastScrollingHorizontalOffset = horizontalOffset;
-
-        double centerPointY = verticalOffset + (viewportHeight / 2.0);
-        int centerPageIndex = FindPageByPosition(centerPointY / scrollViewer.ZoomFactor);
-
-        if (centerPageIndex >= 0 && centerPageIndex < PageCount)
-        {
-            CurrentPageIndex = centerPageIndex;
-        }
-
-        var oldCts = _cts;
-        var newCts = new CancellationTokenSource();
-        _cts = newCts;
-        try { oldCts?.Cancel(); oldCts?.Dispose(); } catch { }
-
-        try
-        {
-            await Task.Delay(LOAD_DEBOUNCE_MS, newCts.Token);
-            //await LoadPagesAsync_WithLock(scrollViewer);
-        }
-        catch (OperationCanceledException) { return; }
-        catch (ObjectDisposedException) { return; }
-        catch (Exception ex)
-        {
-            //Debug.WriteLine($"[ViewChanged] {ex.Message}");
-            return;
-        }
-
-        try
-        {
-            await RequestLoadAsync();
-        }
-        catch (Exception ex)
-        {
-            //Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Requests a page load. Multiple calls are collapsed: while a load is in
-    /// flight, subsequent calls set a pending flag; when the current pass
-    /// completes, the loop re-reads the ScrollViewer state and renders the
-    /// latest visible range (latest-wins).
-    /// </summary>
-    /// <returns></returns>
-    private async Task RequestLoadAsync()
-    {
-        _isLoadPending = true;
-
-        if (_isLoadInFlight) return;
-        _isLoadInFlight = true;
-
-        //Debug.WriteLine($"[INFO] IsLoadInFlight: {_isLoadInFlight}");
-
-        try
-        {
-            while (_isLoadPending)
-            {
-                _isLoadPending = false;
-
-                var doc = _pdfDocument;
-                if (doc == null || doc.PageCount == 0) break;
-
-                var scrollViewer = PdfScrollViewer;
-                double zoom = scrollViewer.ZoomFactor;
-                if (zoom <= 0) break;
-
-                double viewportHeight = scrollViewer.ViewportHeight;
-                double verticalOffset = scrollViewer.VerticalOffset;
-
-                int startIndex = FindPageByPosition(verticalOffset / zoom);
-                int endIndex = FindPageByPosition((verticalOffset + viewportHeight) / zoom);
-
-                //Debug.WriteLine($"[LoadPage] startIndex: {startIndex}, endIndex: {endIndex}");
-
-                if (startIndex < 0 || endIndex < 0) break;
-
-                startIndex = Math.Max(0, startIndex - 1);
-                endIndex = Math.Min(_pdfDocument.PageCount - 1, endIndex + 1);
-                if (startIndex > endIndex) break;
-
-                //Debug.WriteLine($"[Load Page] Index: {startIndex} - {endIndex}");
-
-                try
-                {
-                    await LoadPagesAsync(startIndex, endIndex, zoom);
-
-                }
-                catch (Exception ex)
-                {
-                    //Debug.WriteLine($"[RequestLoadAsync] {ex.Message}");
-                    break;
-                }
-            }
-        }
-        finally
-        {
-            _isLoadInFlight = false;
-        }
-    }
-
-
-    /// <summary>
-    /// Render full-page bitmaps for pages in [startIndex, endIndex] that haven't been
-    /// rendered yet, then render viewport-cropped high-DPI overlays for the top and
-    /// bottom visible pages.
-    /// </summary>
-    private async Task LoadPagesAsync(int startIndex, int endIndex, double zoom)
-    {
-        // Target dpi for RenderPartialForSpecificPage
-        double basicDpi = Math.Min(GetDeviceDpi(PdfScrollViewer), MAX_BASIC_DPI);
-        double targetDpi = Math.Min(GetDeviceDpi(PdfScrollViewer) * zoom, MAX_DPI);
-        Debug.WriteLine(targetDpi);
-
-        for (int i = startIndex; i <= endIndex; i++)
-        {
-            if (_isUnloaded) return;
-            if (_pdfDocument == null) return;
-            if (i < 0 || i >= PdfPages.Count) return;
-
-            int pageIndex = i;
-            if (PdfPages[pageIndex].PageImage != null) continue;
-            PdfPages[pageIndex].IsLoading = true;
-
-            try
-            {
-                var bitmap = await RenderBitmap(pageIndex, basicDpi);
-
-                if (_isUnloaded || _pdfDocument == null) return;
-                if (pageIndex >= PdfPages.Count) return;
-
-                PdfPages[pageIndex].PageImage = bitmap;
-                PdfPages[pageIndex].IsLoading = false;
-            }
-            catch (Exception ex)
-            {
-                //Debug.WriteLine($"Failed to render page {pageIndex}: {ex.Message}");
-
-                if (pageIndex < PdfPages.Count)
-                    PdfPages[pageIndex].IsLoading = false;
-            }
-        }
-
-        int topPageIndex = FindPageByPosition(PdfScrollViewer.VerticalOffset / zoom);
-        int bottomPageIndex = FindPageByPosition((PdfScrollViewer.VerticalOffset + PdfScrollViewer.ViewportHeight) / zoom);
-
-        await RenderPartialForSpecificPage(topPageIndex, zoom, targetDpi, ParticalImageTop);
-        if (bottomPageIndex != topPageIndex) await RenderPartialForSpecificPage(bottomPageIndex, zoom, targetDpi, ParticalImageBottom);
-        else ParticalImageBottom.Visibility = Visibility.Collapsed;
-    }
-
-    /// <summary>
-    /// Rasterize a single page at the given DPI and return the assembled WriteableBitmap.
-    /// Uses native PDFium via PdfRenderer.RenderFullPage.
-    /// </summary>
-    private async Task<WriteableBitmap> RenderBitmap(int pageIndex, double dpi)
-    {
-        var rawBitmapData = Native.PdfRenderer.RenderFullPage(PdfPath, pageIndex, dpi);
-        var bitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
-
-        return bitmap;
-    }
-
-    /// <summary>
-    /// Render a viewport-cropped region of the given page at high DPI.
-    /// The crop rectangle is the intersection of the ScrollViewer's visible area
-    /// with the page bounds, ensuring we only rasterize what the user can actually see.
-    /// The result is positioned as an overlay image on top of the base full-page bitmap.
-    /// </summary>
-    private async Task RenderPartialForSpecificPage(int pageIndex, double zoom, double dpi, Microsoft.UI.Xaml.Controls.Image targetImage)
-    {
-        if (_isUnloaded || _pdfDocument == null) return;
-
-        if (pageIndex < 0 || pageIndex >= PdfPages.Count)
-        {
-            targetImage.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        var pageContainer = PdfPagesRepeater.TryGetElement(pageIndex) as FrameworkElement;
-        if (pageContainer == null)
-        {
-            targetImage.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        Windows.Foundation.Point visibleTopLeft;
-        try
-        {
-            var viewportToPage = PdfScrollViewer.TransformToVisual(pageContainer);
-            visibleTopLeft = viewportToPage.TransformPoint(new Windows.Foundation.Point(0, 0));
-        }
-        catch
-        {
-            targetImage.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        Rect visibleRectInPage = new Rect(
-            Math.Max(0, visibleTopLeft.X),
-            Math.Max(0, visibleTopLeft.Y),
-            PdfScrollViewer.ViewportWidth / zoom,
-            PdfScrollViewer.ViewportHeight / zoom
-        );
-
-        var pageVm = PdfPages[pageIndex];
-        Rect pageBounds = new Rect(0, 0, pageVm.PageWidth, pageVm.PageHeight);
-        visibleRectInPage.Intersect(pageBounds);
-
-        if (visibleRectInPage.Width <= 0 || visibleRectInPage.Height <= 0)
-        {
-            targetImage.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        Rect renderRect = new Rect(
-            visibleRectInPage.X,
-            visibleRectInPage.Y,
-            visibleRectInPage.Width,
-            visibleRectInPage.Height
-        );
-
-        string currentFilePath = PdfPath;
-        var rawBitmapData = await Task.Run(() => Native.PdfRenderer.RenderRegion(currentFilePath, pageIndex, renderRect, dpi));
-
-        if (_isUnloaded || _pdfDocument == null) return;
-        if (pageIndex >= PdfPages.Count) return;
-
-        if (PdfPagesRepeater.TryGetElement(pageIndex) == null || rawBitmapData.Pixels == null || rawBitmapData.Pixels.Length == 0)
-        {
-            targetImage.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        var particalBitmap = await ImageHelper.AssembleBitmapAsync(rawBitmapData);
-
-        if (_isUnloaded || _pdfDocument == null) return;
-        if (pageIndex >= PdfPages.Count) return;
-
-        targetImage.Source = particalBitmap;
-        targetImage.Width = renderRect.Width;
-        targetImage.Height = renderRect.Height;
-
-        // Canvas.GetTop returns NaN if no explicit top is set (e.g., before layout).
-        // NaN > 0 evaluates to false, so the fallback ActualOffset.Y kicks in.
-        // This handles the case where pageContainer hasn't been positioned yet by Canvas yet.
-        double pageOffsetY = Canvas.GetTop(pageContainer) > 0 
-            ? Canvas.GetTop(pageContainer) 
-            : pageContainer.ActualOffset.Y;
-
-        // Same NaN-fallback pattern for X offset.
-        double pageOffsetX = Canvas.GetLeft(pageContainer) > 0
-            ? Canvas.GetLeft(pageContainer)
-            : pageContainer.ActualOffset.X;
-
-        Canvas.SetLeft(targetImage, pageOffsetX + renderRect.X);
-        Canvas.SetTop(targetImage, pageOffsetY + renderRect.Y);
-
-        targetImage.Visibility = Visibility.Visible;
-    }
-
-    /// <summary>
-    /// Calculate offsets to keep the viewport center point fixed when changing zoom level.
-    /// </summary>
-    private (double NewHorizontalOffset, double NewVerticalOffset) ZoomAtViewportCenter(double oldZoom, double newZoom)
-    {
-        var horizontalOffset = PdfScrollViewer.HorizontalOffset;
-        var verticalOffset = PdfScrollViewer.VerticalOffset;
-
-        var viewportWidth = PdfScrollViewer.ViewportWidth;
-        var viewportHeight = PdfScrollViewer.ViewportHeight;
-
-        double centerY = (verticalOffset + (viewportHeight / 2.0)) / oldZoom;
-        double centerX = (horizontalOffset + (viewportWidth / 2.0)) / oldZoom;
-
-        var newVerticalOffset = centerY * newZoom - viewportHeight / 2;
-        var newHorizontalOffset = centerX * newZoom - viewportWidth / 2;
-
-        return (newHorizontalOffset, newVerticalOffset);
-    }
-
-    /// <summary>
-    /// Binary search to find the page index at a given vertical position.
-    /// </summary>
-    private int FindPageByPosition(double positionY)
-    {
-        if (PdfPages == null || !PdfPages.Any()) return -1;
-
-        int left = 0;
-        int right = PdfPages.Count - 1;
-
-        while (left <= right)
-        {
-            int mid = left + (right - left) / 2;
-            var page = PdfPages[mid];
-
-            double pageBottom = (page.DocumentTop + page.PageHeight);
-
-            //if ((positionY >= page.DocumentTop) && positionY < pageBottom)
-            if ((positionY > page.DocumentTop || MathHelper.IsClose(positionY, page.DocumentTop, 0.001)) && positionY < pageBottom)
-            {
-                return mid;
-            }
-            else if (positionY < page.DocumentTop)
-            {
-                right = mid - 1;
-            }
-            else
-            {
-                left = mid + 1;
-            }
-        }
-
-        if (right < 0) return 0;
-        if (left >= PdfPages.Count) return PdfPages.Count - 1;
-
-        return -1;
-    }
-
-    private float GetDeviceDpi(UIElement element)
-    {
-        if (element.XamlRoot == null) return 96f;
-
-        return 96f * (float)element.XamlRoot.RasterizationScale;
-    }
+    #endregion
 }

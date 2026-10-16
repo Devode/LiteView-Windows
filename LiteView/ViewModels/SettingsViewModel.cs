@@ -4,20 +4,13 @@ using CommunityToolkit.WinUI.Helpers;
 using LiteView.Contracts;
 using LiteView.Helpers;
 using LiteView.Models;
-using LiteView.Services;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.Windows.BadgeNotifications;
-using Microsoft.Windows.AppLifecycle;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Windows.ApplicationModel;
-using Windows.Storage;
 
 namespace LiteView.ViewModels
 {
@@ -235,8 +228,9 @@ namespace LiteView.ViewModels
             catch (Exception ex)
             {
                 IsNetworkErrorInfoOpen = true;
-                NetworkErrorInfo = ResourceHelper.GetLocalizedString("NetworkError_Info", ex.Message);
+                NetworkErrorInfo = ResourceHelper.GetLocalizedString("NetworkError_Info", $"\nMessage: {ex.Message}\nInnerException: {ex.InnerException}");
                 Debug.WriteLine($"[CheckForUpdate] {ex.Message}");
+                Debug.WriteLine($"[CheckForUpdate] {ex.InnerException}");
             }
         }
 
