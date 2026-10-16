@@ -30,11 +30,7 @@ namespace LiteView.Pages
     {
         public PdfViewerViewModel ViewModel { get; }
 
-        // Multiplier to convert ButtonZoom into a pixel-based UI scale.
-        // 3.5 is a magic number tuned by trial — 14.0 * 3.5 ≈ 49px toolbar item width.
-        // If ButtonZoom semantics change, this multiplier must be retuned.
-        public double AplyButtonZoom(double buttonZoom) => buttonZoom * 3.5;
-
+        
         private bool _penFlyoutReady;
         private int _currentTipIndex = 0;
         private TeachingTip[] _tips;
@@ -56,9 +52,16 @@ namespace LiteView.Pages
         private bool _isThumbnailPanelShown = true;
         private Storyboard? _thumbnailPanelStoryboard;
 
+
         private const double MinThumbnailHeight = 120;
 
+
         public SolidColorBrush ToBrush(Color color) => new SolidColorBrush(color);
+        
+        // Multiplier to convert ButtonZoom into a pixel-based UI scale.
+        // 3.5 is a magic number tuned by trial — 14.0 * 3.5 ≈ 49px toolbar item width.
+        // If ButtonZoom semantics change, this multiplier must be retuned.
+        public double AplyButtonZoom(double buttonZoom) => buttonZoom * 3.5;
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -79,22 +82,6 @@ namespace LiteView.Pages
             Unloaded += (s, e) => PdfViewer.PropertyChanged -= PdfViewer_PropertyChanged;
         }
 
-        private void PdfViewer_PdfCurrentPageChanged(object? sender, EventArguments.PdfCurrentPageChangedEventArgs e)
-        {
-            if (_pendingJumpTargetPage >= 0)
-            {
-                if (e.CurrentPage == _pendingJumpTargetPage)
-                {
-                    // 已到达目标页，清除跳转标记
-                    _pendingJumpTargetPage = -1;
-                }
-                // 未到达前的中间状态：直接丢弃
-                return;
-            }
-
-            SetThumbnailSelectionProgrammatically(e.CurrentPage);
-        }
-
         private void PdfViewerPage_Loaded(object sender, RoutedEventArgs e)
         {
             //SetupThumbnailImplicitAnimations();
@@ -106,39 +93,12 @@ namespace LiteView.Pages
 
             WelcomeTip.Closed += (s, _) => ShowNextTip();
         }
-
-        private void PdfViewer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (sender is not PdfViewerControl pdfViewerControl) return;
-
-            if (e.PropertyName == nameof(PdfViewerControl.CurrentPageIndex))
-            {
-                var pageIndex = pdfViewerControl.CurrentPageIndex + 1;
-                ViewModel.CurrentPageIndex = pageIndex;
-            }
-
-            if (e.PropertyName == nameof(PdfViewerControl.PageCount))
-                ViewModel.PageCount = pdfViewerControl.PageCount;
-
-            //if (sender is PdfViewerControl pdfViewerControl)
-            //{
-            //    if (pdfViewerControl.CurrentPageIndex == _targetPage)
-            //    {
-            //        _targetPage = -1;
-            //        _isThumbnailListScrolling = false;
-            //    }
-
-            //    ViewModel.CurrentPageIndex = pdfViewerControl.CurrentPageIndex + 1;
-            //    ViewModel.PageCount = pdfViewerControl.PageCount;
-            //}
-        }
-
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
 
             var navView = App.MainWindowInstance.GetNavView();
-            
+
             if (navView != null)
             {
                 foreach (var item in navView.MenuItems)
@@ -167,6 +127,59 @@ namespace LiteView.Pages
             }
         }
 
+        private void PdfViewer_PdfCurrentPageChanged(object? sender, EventArguments.PdfCurrentPageChangedEventArgs e)
+        {
+            if (_pendingJumpTargetPage >= 0)
+            {
+                if (e.CurrentPage == _pendingJumpTargetPage)
+                {
+                    // 已到达目标页，清除跳转标记
+                    _pendingJumpTargetPage = -1;
+                }
+                // 未到达前的中间状态：直接丢弃
+                return;
+            }
+
+            SetThumbnailSelectionProgrammatically(e.CurrentPage);
+        }
+
+        private void PdfViewer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not PdfViewerControl pdfViewerControl) return;
+
+            if (e.PropertyName == nameof(PdfViewerControl.CurrentPageIndex))
+            {
+                var pageIndex = pdfViewerControl.CurrentPageIndex + 1;
+                ViewModel.CurrentPageIndex = pageIndex;
+            }
+
+            if (e.PropertyName == nameof(PdfViewerControl.PageCount))
+                ViewModel.PageCount = pdfViewerControl.PageCount;
+
+            //if (sender is PdfViewerControl pdfViewerControl)
+            //{
+            //    if (pdfViewerControl.CurrentPageIndex == _targetPage)
+            //    {
+            //        _targetPage = -1;
+            //        _isThumbnailListScrolling = false;
+            //    }
+
+            //    ViewModel.CurrentPageIndex = pdfViewerControl.CurrentPageIndex + 1;
+            //    ViewModel.PageCount = pdfViewerControl.PageCount;
+            //}
+        }
+
+
+        #region Tutorials
+        private void TutorialBtn_Click(object sender, RoutedEventArgs e)
+        {
+            WelcomeTip.IsOpen = true;
+            _tips = new[] { SelectBtnTip, PenBtnTip, EraserBtnTip, ClearBtnTip, FitToWindowBtnTip, ZoomInBtnTip, ZoomOutBtnTip, SettingsBtnTip, PageBtnTip };
+            _currentTipIndex = 0;
+
+            WelcomeTip.Closed += (s, _) => ShowNextTip();
+        }
+
         private void ShowNextTip()
         {
             if (_currentTipIndex >= _tips.Length)
@@ -186,6 +199,10 @@ namespace LiteView.Pages
             tip.Closed += OnClosed;
             tip.IsOpen = true;
         }
+        #endregion
+
+
+        #region ToolButtons
 
         /// <summary>
         /// Handle toggle button clicks for the annotation tool bar.
@@ -305,73 +322,8 @@ namespace LiteView.Pages
             PdfViewer.ClearAnnotations();
         }
 
-        /// <summary>
-        /// Show a page-jump dialog with input validation (numeric format + range check).
-        /// The dialog stays open with an error message until valid input is provided.
-        /// </summary>
-        private async void PageBtn_Click(object sender, RoutedEventArgs e)
-        {
-            ToggleThumbnailPanel();
-            //TextBox inputBox = new TextBox
-            //{
-            //    PlaceholderText = "Enter page number",
-            //    Header = "Jump to page"
-            //};
+        #endregion
 
-            //TextBlock errorTip = new TextBlock
-            //{
-            //    Foreground = new SolidColorBrush(Microsoft.UI.Colors.Red),
-            //    Margin = new Thickness(0, 5, 0, 0),
-            //    Visibility = Visibility.Collapsed
-            //};
-
-            //var panel = new StackPanel();
-            //panel.Children.Add(inputBox);
-            //panel.Children.Add(errorTip);
-
-            //ContentDialog dialog = new ContentDialog
-            //{
-            //    Style = (Style)Application.Current
-            //        .Resources["DefaultContentDialogStyle"],
-            //    Title = "Jump to page",
-            //    Content = panel,
-            //    PrimaryButtonText = "OK",
-            //    CloseButtonText = "Cancel",
-            //    DefaultButton = ContentDialogButton.Primary
-            //};
-
-            //dialog.PrimaryButtonClick += (sender, args) =>
-            //{
-            //    int pageIndex;
-            //    if (!int.TryParse(inputBox.Text.Trim(), out pageIndex))
-            //    {
-            //        args.Cancel = true;
-
-            //        errorTip.Text = "Invalid format, please enter a valid number";
-            //        errorTip.Visibility = Visibility.Visible;
-
-            //        inputBox.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
-            //    } 
-            //    else if (pageIndex - 1 < 0 || pageIndex - 1 >= PdfViewer.PageCount)
-            //    {
-            //        args.Cancel = true;
-
-            //        errorTip.Text = "Invalid page number";
-            //        errorTip.Visibility = Visibility.Visible;
-
-            //        inputBox.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
-            //    }
-            //    else
-            //    {
-            //        errorTip.Visibility = Visibility.Collapsed;
-            //        inputBox.BorderBrush = null;
-            //        PdfViewer.JumpToPage(pageIndex - 1);
-            //    }
-            //};
-
-            //dialog.XamlRoot = this.Content.XamlRoot;
-            //await dialog.ShowAsync();
-        }
 
         private void OptionFullScreen_Click(object sender, RoutedEventArgs e)
         {
@@ -405,19 +357,23 @@ namespace LiteView.Pages
             PdfViewer.SetAnnotationThickness(ViewModel.StrokeThickness);
         }
 
-        private void StrokeSimlifiedThresholdSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+
+        #region Jumping Page and ThubnailList
+
+        /// <summary>
+        /// Show a or close ThumbnailList
+        /// </summary>
+        private async void PageBtn_Click(object sender, RoutedEventArgs e)
         {
-            //PdfViewer.
-            //Debug.WriteLine(StrokeSimplifiedTolerance);
+            ToggleThumbnailPanel();
         }
 
-        private void TutorialBtn_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// 切换缩略图面板显示状态。
+        /// </summary>
+        private void ToggleThumbnailPanel()
         {
-            WelcomeTip.IsOpen = true;
-            _tips = new[] { SelectBtnTip, PenBtnTip, EraserBtnTip, ClearBtnTip, FitToWindowBtnTip, ZoomInBtnTip, ZoomOutBtnTip, SettingsBtnTip, PageBtnTip };
-            _currentTipIndex = 0;
-
-            WelcomeTip.Closed += (s, _) => ShowNextTip();
+            PlayThumbnailPanelSlideAnimation(!_isThumbnailPanelShown);
         }
 
         private void ThumbnailList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
@@ -426,7 +382,6 @@ namespace LiteView.Pages
 
             if (args.InRecycleQueue)
             {
-
                 return;
             }
 
@@ -434,17 +389,6 @@ namespace LiteView.Pages
             {
                 args.RegisterUpdateCallback(OnThumbnailPhase1);
             }
-            args.Handled = true;
-        }
-
-        private void OnThumbnailPhase1(
-            ListViewBase sender, ContainerContentChangingEventArgs args)
-        {
-            if (args.InRecycleQueue) return;
-
-            var item = (PageItem)args.Item;
-            // 渲染
-            item.Render();
             args.Handled = true;
         }
 
@@ -460,15 +404,6 @@ namespace LiteView.Pages
             ViewModel.ThumbnailHeight = newHeight;
         }
 
-        private void PdfGrid_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            double maxThumbnailHeight = Math.Max(MinThumbnailHeight, (PdfGrid.ActualHeight - PageController.ActualHeight - 110.0) );
-
-            double newThumbnailHeight = Math.Clamp(ViewModel.ThumbnailHeight, MinThumbnailHeight, maxThumbnailHeight);
-
-            ViewModel.ThumbnailHeight = newThumbnailHeight;
-        }
-
         private void ThumbnailList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_programmaticSelectionDepth > 0) return;
@@ -479,28 +414,6 @@ namespace LiteView.Pages
             _pendingJumpTargetPage = newIndex;
             PdfViewer.JumpToPage(newIndex);
         }
-
-        /// <summary>
-        /// 以代码方式设置缩略图选中项，期间屏蔽 SelectionChanged 回传。
-        /// </summary>
-        private void SetThumbnailSelectionProgrammatically(int index)
-        {
-            if (index < 0 || index >= ThumbnailList.Items.Count) return;
-            if (ThumbnailList.SelectedIndex == index) return;
-
-            _programmaticSelectionDepth++;
-            try
-            {
-                ThumbnailList.SelectedIndex = index;
-                ThumbnailList.ScrollIntoView(ThumbnailList.SelectedItem, ScrollIntoViewAlignment.Leading);
-
-            }
-            finally
-            {
-                _programmaticSelectionDepth--;
-            }
-        }
-
         private void PageNumberTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             Debug.WriteLine($"[PageNumberTextBox_TextChanged] {ViewModel.CurrentPageNumberTextBoxText}");
@@ -534,22 +447,39 @@ namespace LiteView.Pages
             }
         }
 
-        private void PageNumberTextBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
-        {
-            if (e.Key == Windows.System.VirtualKey.Enter)
-            {
-                //int currentPageNumber;
-                //if (!int.TryParse(ViewModel.CurrentPageNumberTextBoxText.Trim(), out currentPageNumber)) return;
-                //// 因为是从 1 开始的页码，所以要检查是否小于 1 或大于总页数
-                //else if (currentPageNumber < 1 || currentPageNumber > ViewModel.PageCount) return;
-                //else //(currentPageNumber >= 1 && currentPageNumber <= ViewModel.PageCount)
-                //{
-                //    var targetPageIndex = currentPageNumber - 1;
 
-                //    ThumbnailList.ScrollIntoView(ViewModel.PdfItems[targetPageIndex], ScrollIntoViewAlignment.Leading);
-                //}
+        private void OnThumbnailPhase1(
+            ListViewBase sender, ContainerContentChangingEventArgs args)
+        {
+            if (args.InRecycleQueue) return;
+
+            var item = (PageItem)args.Item;
+            // 渲染
+            item.Render();
+            args.Handled = true;
+        }
+
+        /// <summary>
+        /// 以代码方式设置缩略图选中项，期间屏蔽 SelectionChanged 回传。
+        /// </summary>
+        private void SetThumbnailSelectionProgrammatically(int index)
+        {
+            if (index < 0 || index >= ThumbnailList.Items.Count) return;
+            if (ThumbnailList.SelectedIndex == index) return;
+
+            _programmaticSelectionDepth++;
+            try
+            {
+                ThumbnailList.SelectedIndex = index;
+                ThumbnailList.ScrollIntoView(ThumbnailList.SelectedItem, ScrollIntoViewAlignment.Leading);
+
+            }
+            finally
+            {
+                _programmaticSelectionDepth--;
             }
         }
+
 
         /// <summary>
         /// 播放缩略图面板“从屏幕底部伸出 / 收回底部”的动画。
@@ -639,52 +569,15 @@ namespace LiteView.Pages
             }
         }
 
-        //private void SetupThumbnailImplicitAnimations()
-        //{
-        //    var visual = ElementCompositionPreview.GetElementVisual(ThumbnailPanel);
+        #endregion
 
-        //    var compositor = visual.Compositor;
-
-        //    // 位移的隐式动画
-        //    var offsetAnim = compositor.CreateVector3KeyFrameAnimation();
-        //    offsetAnim.Target = "Offset";
-        //    offsetAnim.InsertExpressionKeyFrame(1f, "this.FinalValue");
-        //    offsetAnim.Duration = TimeSpan.FromMilliseconds(320);
-
-        //    var offsetCollection = compositor.CreateImplicitAnimationCollection();
-        //    offsetCollection["Offset"] = offsetAnim;
-        //    visual.ImplicitAnimations = offsetCollection;
-
-        //    // 透明度的隐式动画
-        //    var opacityAnim = compositor.CreateScalarKeyFrameAnimation();
-        //    opacityAnim.Target = "Opacity";
-        //    opacityAnim.InsertExpressionKeyFrame(1f, "this.FinalValue");
-        //    opacityAnim.Duration = TimeSpan.FromMilliseconds(240);
-
-        //    var opacityCollection = compositor.CreateImplicitAnimationCollection();
-        //    opacityCollection["Opacity"] = opacityAnim;
-        //    visual.ImplicitAnimations = opacityCollection;
-        //}
-
-        /// <summary>
-        /// 切换缩略图面板显示状态。
-        /// </summary>
-        private void ToggleThumbnailPanel()
+        private void PdfGrid_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            //_isThumbnailPanelShown = !_isThumbnailPanelShown;
+            double maxThumbnailHeight = Math.Max(MinThumbnailHeight, (PdfGrid.ActualHeight - PageController.ActualHeight - 110.0));
 
-            //var visual = ElementCompositionPreview.GetElementVisual(ThumbnailPanel);
-            //double distance = GetThumbnailSlideDistance();
+            double newThumbnailHeight = Math.Clamp(ViewModel.ThumbnailHeight, MinThumbnailHeight, maxThumbnailHeight);
 
-            //// 直接改 Offset，隐式动画会自动过渡
-            //visual.Offset = new System.Numerics.Vector3(
-            //    visual.Offset.X,
-            //    (float)(_isThumbnailPanelShown ? 0 : distance),
-            //    visual.Offset.Z);
-
-            //visual.Opacity = _isThumbnailPanelShown ? 1f : 0f;
-
-            PlayThumbnailPanelSlideAnimation(!_isThumbnailPanelShown);
+            ViewModel.ThumbnailHeight = newThumbnailHeight;
         }
     }
 }
