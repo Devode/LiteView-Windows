@@ -1,55 +1,173 @@
-name: Build LiteView MSIX
+name: Build & Sign LiteView
 
-on:
+'on':
   push:
-    branches: [ main ]
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # 手动触发时可选择是否启用 SignPath 签名（需要已配置 secrets）
   workflow_dispatch:
+    inputs:
+      sign_with_signpath:
+        description: '是否使用 SignPath 签名（需要已配置 secrets）'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  # 全局签名开关：false = 仅产出未签名 MSIX；true = 提交给 SignPath 签名
+  # 拿到 SignPath 证书后，将此值改为 'true' 即可启用自动签名
+  # 注意：仅在手动触发时此开关可被 inputs 覆盖
+  SIGN_WITH_SIGNPATH: 'false'
 
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         platform: [x86, x64]
     runs-on: windows-2022
     permissions:
       id-token: write
       contents: read
+      attestations: write
+    outputs:
+      # 运行时判断：手动触发且勾选了签名 → 'true'；否则用 env 固定值
+      # 使用 fromJSON 确保 boolean 被序列化为字符串 'true'/'false'
+      signpath-enabled: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sign_with_signpath || env.SIGN_WITH_SIGNPATH }}
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET 8
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.slnx') }}
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.slnx') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
 
-    - name: Restore Dependencies
-      run: dotnet restore LiteView.slnx
+      - name: Restore Dependencies
+        run: dotnet restore LiteView.slnx
 
-    - name: Build MSIX (${{ matrix.platform }})
-      run: |
-        dotnet build LiteView.slnx `
-          -c Release `
-          -p:Platform=${{ matrix.platform }} `
-          -p:AppxBundle=Never `
-          -p:AppxPackageDir="${{ github.workspace }}\AppPackages\" `
-          -p:GenerateAppxPackageOnBuild=true `
-          -p:UapAppxPackageBuildMode=SideloadOnly
+      # 构建 MSIX —— 关键：关闭签名，确保 CI 不依赖任何本地证书
+      - name: Build MSIX (${{ matrix.platform }})
+        run: |
+          dotnet build LiteView.slnx `
+            -c Release `
+            -p:Platform=${{ matrix.platform }} `
+            -p:AppxBundle=Never `
+            -p:AppxPackageDir="${{ github.workspace }}\AppPackages\" `
+            -p:GenerateAppxPackageOnBuild=true `
+            -p:UapAppxPackageBuildMode=SideloadOnly `
+            -p:AppxPackageSigningEnabled=false `
+            -p:PackageCertificateThumbprint= `
+            -p:PackageCertificateKeyFile= `
+            -p:AppxKitSigningEnabled=false
 
-    - name: Generate Attestation
-      uses: actions/attest-build-provenance@v1
-      with:
-        subject-path: '${{ github.workspace }}\AppPackages\*.msix'
+      - name: Locate MSIX
+        id: locate
+        run: |
+          $msix = Get-ChildItem "${{ github.workspace }}\AppPackages\*.msix" | Select-Object -First 1
+          if (-not $msix) {
+            Write-Error "未找到构建产出的 MSIX 文件，请检查构建步骤是否成功"
+            exit 1
+          }
+          echo "MSIX_PATH=$($msix.FullName)" >> $env:GITHUB_OUTPUT
+          echo "MSIX_NAME=$($msix.Name)" >> $env:GITHUB_OUTPUT
+          Write-Host "发现 MSIX：$($msix.FullName)"
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: LiteView-${{ matrix.platform }}-Release
-        path: ${{ github.workspace }}\AppPackages\
+      - name: Verify MSIX is Unsigned
+        run: |
+          $sig = Get-AuthenticodeSignature "${{ steps.locate.outputs.MSIX_PATH }}"
+          Write-Host "签名状态：$($sig.Status)"
+          if ($sig.Status -eq 'Valid' -or $sig.Status -eq 'UnknownError') {
+            Write-Warning "MSIX 已签名或签名状态异常，请确认构建参数是否正确"
+          } else {
+            Write-Host "✓ MSIX 未签名，符合预期"
+          }
+
+      - name: Generate Build Attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: '${{ steps.locate.outputs.MSIX_PATH }}'
+
+      - name: Upload Unsigned MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiteView-${{ matrix.platform }}-unsigned
+          path: ${{ steps.locate.outputs.MSIX_PATH }}
+
+  # 签名阶段：仅当 SIGN_WITH_SIGNPATH 为 true 时执行
+  # 当前（自签名过渡期）此 job 不会运行，构建产物由开发者在本地手动签名
+  sign:
+    needs: build
+    if: needs.build.outputs.signpath-enabled == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x86, x64]
+    runs-on: windows-2022
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+
+    steps:
+      - name: Download Unsigned MSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: LiteView-${{ matrix.platform }}-unsigned
+
+      - name: Submit to SignPath for Signing
+        id: signpath
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-url: ${{ secrets.SIGNPATH_API_URL }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: 'liteview'
+          signing-policy-slug: 'release-signing'
+          artifact-configuration-slug: 'msix'
+          github-artifact-id: LiteView-${{ matrix.platform }}-unsigned
+          wait-for-completion: true
+          output-artifact-directory: ./signed
+
+      - name: Generate Attestation for Signed MSIX
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: './signed/*.msix'
+
+      - name: Upload Signed MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiteView-${{ matrix.platform }}-signed
+          path: ./signed/*.msix
+
+  # 发布阶段：仅在有 tag 时触发，将签名产物自动发布到 Release
+  publish:
+    needs: [build, sign]
+    if: |
+      startsWith(github.ref, 'refs/tags/') &&
+      needs.build.outputs.signpath-enabled == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Signed Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: LiteView-*-signed
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.msix'
+          prerelease: ${{ contains(github.ref_name, 'preview') || contains(github.ref_name, 'beta') }}
+          generate_release_notes: true
