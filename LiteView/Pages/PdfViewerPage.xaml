@@ -80,8 +80,25 @@
     </Page.Resources>
 
     <Grid x:Name="PdfGrid" SizeChanged="PdfGrid_SizeChanged">
+
         <control:PdfViewerControl x:Name="PdfViewer"
                                   SimplifiedTolerance="{x:Bind ViewModel.StrokeSimplifiedTolerance, Mode=OneWay}"/>
+        
+        <Border x:Name="Clock"
+                HorizontalAlignment="Center" VerticalAlignment="Top"
+                Margin="20" Padding="15,5,15,5" CornerRadius="24"
+                Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderThickness="1"
+                Translation="0,0,16">
+            <Border.Shadow>
+                <ThemeShadow />
+            </Border.Shadow>
+
+            <TextBlock x:Name="TimeTextBlock"
+                       FontSize="{x:Bind ViewModel.ClockFontSize, Mode=OneWay}"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+        </Border>
 
         <Button x:Name="TutorialBtn" Margin="12" 
                 HorizontalAlignment="Right" 
@@ -304,7 +321,12 @@
                             <Button.Flyout>
                                 <Flyout Placement="BottomEdgeAlignedRight">
                                     <StackPanel Spacing="12" MinWidth="200">
-                                        <Slider x:Uid="ToolBarZoom" Minimum="8" Maximum="64" StepFrequency="0.1" Value="{x:Bind ViewModel.ButtonZoom, Mode=TwoWay}" />
+                                        <ToggleSwitch Header="开启悬浮时钟" IsOn="{x:Bind ViewModel.IsClockOpen, Mode=TwoWay}" />
+                                        <Slider Header="时钟字体大小" Value="{x:Bind ViewModel.ClockFontSize, Mode=TwoWay}" Minimum="24" Maximum="64" />
+
+                                        <Rectangle Height="1" Fill="#DDDDDD" Margin="4,4"/>
+
+                                        <Slider x:Uid="ToolBarZoom" Minimum="10" Maximum="64" StepFrequency="0.1" Value="{x:Bind ViewModel.ButtonZoom, Mode=TwoWay}" />
 
                                         <!-- <Slider x:Name="StrokeThicknessSlider" x:Uid="StrokeThickness" Minimum="0.1" Maximum="24" StepFrequency="0.1" ValueChanged="StrokeThicknessSlider_ValueChanged" Value="{x:Bind StrokeThickness, Mode=TwoWay}" /> -->
 
@@ -326,6 +348,7 @@
                                                     <StackPanel Spacing="12" MinWidth="200">
                                                         <Slider x:Uid="StrokeSimplifiedTolerance" Minimum="0" Maximum="16" StepFrequency="0.1" Value="{x:Bind ViewModel.StrokeSimplifiedTolerance, Mode=TwoWay}" MinWidth="100"
                                                                 VerticalAlignment="Center"/>
+                                                        
                                                     </StackPanel>
                                                 </Flyout>
                                             </Button.Flyout>

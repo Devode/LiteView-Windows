@@ -39,6 +39,7 @@ namespace LiteView.ViewModels
     public partial class SettingsViewModel : ObservableObject
     {
         private readonly IUpdateService _updateService;
+        private readonly ISupabaseService _supabaseService;
         private readonly INetworkService _networkService;
         private readonly IMessageDialogService _dialogService;
 
@@ -70,11 +71,14 @@ namespace LiteView.ViewModels
 
         private const string themeSettingKey = "AppTheme";
 
-        public SettingsViewModel(IUpdateService updateService,
+        public SettingsViewModel(
+            IUpdateService updateService,
+            ISupabaseService supabaseService,
             INetworkService networkService,
             IMessageDialogService dialogService)
         {
             _updateService = updateService;
+            _supabaseService = supabaseService;
             _networkService = networkService;
             _dialogService = dialogService;
 
@@ -210,11 +214,12 @@ namespace LiteView.ViewModels
                     // The returned array ordering depends on database row order (no explicit ORDER BY).
                     // downloadUrls[0] is assumed to be the correct URL; if multiple rows exist,
                     // the first one returned wins — this is fragile and should be parameterized.
-                    var downloadUrls = await _networkService.GetSupabaseDataAsync("download_url?version_id=eq.2", AppJsonContext.Default.DownloadUrlArray);
+                    var downloadUrls = await _supabaseService.QueryAsync<DownloadUrl>(t => t.Where(x => x.VersionId == 2));
+                    //var downloadUrls = await _networkService.GetSupabaseDataAsync("download_url?version_id=eq.2", AppJsonContext.Default.DownloadUrlArray);
 
                     if (result == Contracts.DialogResult.Primary
                         && downloadUrls != null
-                        && downloadUrls.Length > 0
+                        && downloadUrls.Count > 0
                         && !string.IsNullOrEmpty(downloadUrls[0].Url))
                     {
                         await Windows.System.Launcher.LaunchUriAsync(new Uri(downloadUrls[0].Url));

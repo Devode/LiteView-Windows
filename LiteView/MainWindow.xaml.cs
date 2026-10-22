@@ -53,6 +53,11 @@ namespace LiteView
             return navView;
         }
 
+        public void SetTitleBarVisiblility(bool isVisible)
+        {
+            titleBar.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         public Frame GetNavFrame() => navFrame;
 
         private void titleBar_BackRequested(TitleBar sender, object args)

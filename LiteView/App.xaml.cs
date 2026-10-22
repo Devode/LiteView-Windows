@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using Microsoft.Windows.Globalization;
+using Supabase.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -117,12 +118,18 @@ namespace LiteView
                             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
                             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1)
                         };
-                        return new HttpClient();
+                        return new HttpClient(handler);
                     });
+
+                    var configuration = context.Configuration;
+                    services.AddSupabase(
+                        configuration["Supabase:Url"]!,
+                        configuration["Supabse:Key"]!);
 
                     // Services
                     services.AddSingleton<IPdfDataService, PdfDataService>();
                     services.AddSingleton<INetworkService, NetworkService>();
+                    services.AddSingleton<ISupabaseService, SupabaseService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
                     services.AddSingleton<IMessageDialogService, MessageDialogService>();
                     services.AddSingleton<INavigationService, NavigationService>();
@@ -138,6 +145,7 @@ namespace LiteView
 
                     // Pages
                     services.AddTransient<PdfListPage>();
+                    services.AddTransient<PdfViewerPage>();
                     services.AddTransient<SettingsPage>();
 
                     services.AddSingleton<MainWindow>();

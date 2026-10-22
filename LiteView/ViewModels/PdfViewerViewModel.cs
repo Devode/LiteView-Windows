@@ -35,6 +35,12 @@ namespace LiteView.ViewModels
         private float _strokeSimplifiedTolerance = 0.5f;
 
         [ObservableProperty]
+        private bool _isClockOpen = false;
+
+        [ObservableProperty]
+        private int _ClockFontSize = 36;
+
+        [ObservableProperty]
         private ToolKind _currentTool = ToolKind.Select;
 
         [ObservableProperty] 

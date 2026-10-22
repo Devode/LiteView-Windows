@@ -52,6 +52,8 @@ namespace LiteView.Pages
         private bool _isThumbnailPanelShown = true;
         private Storyboard? _thumbnailPanelStoryboard;
 
+        private DispatcherTimer _clockTimer;
+
 
         private const double MinThumbnailHeight = 120;
 
@@ -79,12 +81,14 @@ namespace LiteView.Pages
             Loaded += PdfViewerPage_Loaded;
             PdfViewer.PropertyChanged += PdfViewer_PropertyChanged;
             PdfViewer.PdfCurrentPageChanged += PdfViewer_PdfCurrentPageChanged;
-            Unloaded += (s, e) => PdfViewer.PropertyChanged -= PdfViewer_PropertyChanged;
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            Unloaded += PdfViewerPage_Unloaded;
         }
 
         private void PdfViewerPage_Loaded(object sender, RoutedEventArgs e)
         {
-            //SetupThumbnailImplicitAnimations();
+            Clock.Visibility = Visibility.Collapsed;
+            ElementCompositionPreview.SetIsTranslationEnabled(Clock, true);
 
             if (!ViewModel.IsFirstRun) return;
 
@@ -93,6 +97,35 @@ namespace LiteView.Pages
 
             WelcomeTip.Closed += (s, _) => ShowNextTip();
         }
+
+        private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ViewModel.IsClockOpen))
+            {
+                if (ViewModel.IsClockOpen)
+                {
+                    //Clock.Visibility = Visibility.Visible;
+                    ShowClockComposition();
+                    StartClock();
+                }
+                else
+                {
+                    //Clock.Visibility = Visibility.Collapsed;
+                    HideClockComposition();
+                    StopClock();
+                }
+            }
+        }
+
+        private void PdfViewerPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            PdfViewer.PropertyChanged -= PdfViewer_PropertyChanged;
+
+            if (!ViewModel.IsClockOpen)
+                StopClock();
+        }
+
+        
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
@@ -168,6 +201,113 @@ namespace LiteView.Pages
             //    ViewModel.PageCount = pdfViewerControl.PageCount;
             //}
         }
+
+
+        private void StartClock()
+        {
+            Debug.WriteLine("[PdfViewerPage] Clock started");
+            _clockTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1) // 每秒刷新一次
+            };
+            _clockTimer.Tick += (s, e) =>
+            {
+                Debug.WriteLine("[PdfViewerPage] Clock updated");
+
+                TimeTextBlock.Text = DateTime.Now.ToString("HH:mm:ss");
+            };
+            _clockTimer.Start();
+
+            // 立即刷新一次，避免启动后要等 1 秒才显示
+            TimeTextBlock.Text = DateTime.Now.ToString("HH:mm:ss");
+        }
+
+        private void StopClock()
+        {
+            if (_clockTimer != null)
+            {
+                _clockTimer.Stop();
+                _clockTimer.Tick -= null;
+                _clockTimer = null;
+            }
+        }
+
+        private void ShowClockComposition()
+        {
+            var visual = ElementCompositionPreview.GetElementVisual(Clock);
+            var compositor = visual.Compositor;
+            visual.CenterPoint = new Vector3((float)Clock.ActualWidth / 2, 0, 0);
+
+            Clock.Visibility = Visibility.Visible;
+
+            var fadeIn = compositor.CreateScalarKeyFrameAnimation();
+            fadeIn.InsertKeyFrame(1f, 1f); // 从当前值 -> 1
+            fadeIn.Duration = TimeSpan.FromMilliseconds(300);
+            fadeIn.Target = "Opacity";
+
+            var flyIn = compositor.CreateVector3KeyFrameAnimation();
+            flyIn.InsertKeyFrame(0.6f, new Vector3(0, 4, 16));
+            flyIn.InsertKeyFrame(1f, new Vector3(0, 0, 16));
+            flyIn.Duration = TimeSpan.FromMilliseconds(400);
+            flyIn.Target = "Translation";
+
+            var scaleUp = compositor.CreateVector3KeyFrameAnimation();
+            scaleUp.InsertKeyFrame(0.6f, new Vector3(1.1f, 1.01f, 0));
+            scaleUp.InsertKeyFrame(1f, new Vector3(1f));
+            scaleUp.Duration = TimeSpan.FromMilliseconds(400);
+            scaleUp.Target = "Scale";
+
+            var animGroup = compositor.CreateAnimationGroup();
+            animGroup.Add(fadeIn);
+            animGroup.Add(flyIn);
+            animGroup.Add(scaleUp);
+
+            //visual.StartAnimation("Opacity", fadeIn);
+
+            visual.StartAnimationGroup(animGroup);
+        }
+
+        private void HideClockComposition()
+        {
+            var visual = ElementCompositionPreview.GetElementVisual(Clock);
+            var compositor = visual.Compositor;
+            visual.CenterPoint = new Vector3((float)Clock.ActualWidth / 2, 0, 0);
+
+            var fadeOut = compositor.CreateScalarKeyFrameAnimation();
+            fadeOut.InsertKeyFrame(1f, 0f); // 从当前值 -> 0
+            fadeOut.Duration = TimeSpan.FromMilliseconds(50);
+            fadeOut.Target = "Opacity";
+
+            var flyOut = compositor.CreateVector3KeyFrameAnimation();
+            flyOut.InsertKeyFrame(1f, new Vector3(0, -(visual.Size.Y + 20), 4));
+            flyOut.Duration = TimeSpan.FromMilliseconds(250);
+            flyOut.Target = "Translation";
+
+            var scaleDown = compositor.CreateVector3KeyFrameAnimation();
+            scaleDown.InsertKeyFrame(1f, new Vector3(0.2f));
+            scaleDown.Duration = TimeSpan.FromMilliseconds(250);
+            scaleDown.Target = "Scale";
+
+            var animGroup = compositor.CreateAnimationGroup();
+            animGroup.Add(fadeOut);
+            animGroup.Add(flyOut);
+            animGroup.Add(scaleDown);
+
+            var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+            //visual.StartAnimation("Opacity", fadeOut);
+            visual.StartAnimationGroup(animGroup);
+            batch.Completed += (s, e) =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    // 只有真正淡到 0 才折叠；被 Show 打断时 Opacity 不是 0，不会错误折叠
+                    if (visual.Opacity < 0.01f)
+                        Clock.Visibility = Visibility.Collapsed;
+                });
+            };
+            batch.End();
+        }
+
 
 
         #region Tutorials
@@ -341,6 +481,7 @@ namespace LiteView.Pages
             }
             else
             {
+
                 WindowHelper.SetFullScreen(App.MainWindowInstance, false);
                 optionFullScreen.Text = "Enter Full Screen";
                 optionFullScreen.Tag = "EnterFullScreen";
