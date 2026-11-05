@@ -254,6 +254,12 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
 
         var scrollViewer = (ScrollViewer)sender;
 
+        // 缩放结束时以新分辨率重渲染（避免缩放中反复重建表面导致闪烁）
+        if (!e.IsIntermediate)
+        {
+            AnnotationCanvas?.UpdateRenderDpi(scrollViewer.ZoomFactor);
+        }
+
         double viewportHeight = scrollViewer.ViewportHeight;
         double verticalOffset = scrollViewer.VerticalOffset;
         double horizontalOffset = scrollViewer.HorizontalOffset;
