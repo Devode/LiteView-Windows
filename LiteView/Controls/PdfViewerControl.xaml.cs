@@ -3,6 +3,7 @@ using LiteView.EventArguments;
 using LiteView.Helpers;
 using LiteView.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -17,6 +18,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
+using Windows.UI;
 
 namespace LiteView.Controls;
 
@@ -120,17 +122,29 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
         DependencyProperty.Register("ViewerOffset", typeof(Windows.Foundation.Point), typeof(PdfViewerControl), new PropertyMetadata(new Windows.Foundation.Point(0, 0)));
 
     /// <summary>The simplified tolerance of AnnotationCanvasControl.</summary>
-    public float SimplifiedTolerance
+    public float AnnotationSimplifiedTolerance
     {
-        get => (float)GetValue(SimplifiedToleranceProperty);
-        set
-        {
-            SetValue(SimplifiedToleranceProperty, value);
-            Debug.WriteLine(SimplifiedTolerance);
-        }
+        get => (float)GetValue(AnnotationSimplifiedToleranceProperty);
+        set => SetValue(AnnotationSimplifiedToleranceProperty, value);
     }
-    public static readonly DependencyProperty SimplifiedToleranceProperty = DependencyProperty.Register(
-        "SimplifiedTolerance", typeof(float), typeof(PdfViewerControl), new PropertyMetadata(0f));
+    public static readonly DependencyProperty AnnotationSimplifiedToleranceProperty = DependencyProperty.Register(
+        nameof(AnnotationSimplifiedTolerance), typeof(float), typeof(PdfViewerControl), new PropertyMetadata(0.5f));
+
+    public Color AnnotationPenColor
+    {
+        get => (Color)GetValue(AnnotationPenColorProperty);
+        set => SetValue(AnnotationPenColorProperty, value);
+    }
+    public static readonly DependencyProperty AnnotationPenColorProperty = DependencyProperty.Register(
+        nameof(AnnotationPenColor), typeof(Color), typeof(PdfViewerControl), new PropertyMetadata(Colors.Red));
+
+    public double AnnotationPenThickness
+    {
+        get => (double)GetValue(AnnotationPenThicknessProperty);
+        set => SetValue(AnnotationPenThicknessProperty, value);
+    }
+    public static readonly DependencyProperty AnnotationPenThicknessProperty = DependencyProperty.Register(
+        nameof(AnnotationPenThickness), typeof(double), typeof(PdfViewerControl), new PropertyMetadata(1.0));
 
     public event PropertyChangedEventHandler PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -631,18 +645,6 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     public void SetAnnotationEraseMode(bool isEraseMode)
     {
         AnnotationCanvas.IsEraser = isEraseMode;
-    }
-
-    /// <summary>Set the pen color for new annotation strokes.</summary>
-    public void SetAnnotationColor(Windows.UI.Color color)
-    {
-        AnnotationCanvas.SetPenColor(color);
-    }
-
-    /// <summary>Set the stroke thickness for new annotation strokes.</summary>
-    public void SetAnnotationThickness(double thickness)
-    {
-        AnnotationCanvas.SetStrokeThickness(thickness);
     }
 
     /// <summary>Remove all annotation strokes from the canvas.</summary>

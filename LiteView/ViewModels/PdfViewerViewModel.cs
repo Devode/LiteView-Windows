@@ -26,7 +26,7 @@ namespace LiteView.ViewModels
         private double _buttonZoom = 14.0;
 
         [ObservableProperty]
-        private double _strokeThickness = 1.0;
+        private double _penThickness = 1.0;
 
         [ObservableProperty]
         private Color _penColor = Colors.Red;

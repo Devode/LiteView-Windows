@@ -38,13 +38,11 @@ namespace LiteView.Controls
         private const float ERASER_BASE_RADIUS = 8f;   // DIP
         private const float MAX_DPI_SCALE = 10f;
 
-        private Color _currentPenColor = Colors.Red;
 
         private readonly Dictionary<uint, StrokeState> _activeStrokes = new();
 
         private readonly List<BakedStroke> _bakedStrokes = new();
 
-        private double _currentStrokeThickness = 1.0;
 
         private bool _isEraser = false;
         public bool IsEraser
@@ -77,6 +75,22 @@ namespace LiteView.Controls
         public static readonly DependencyProperty SimplifiedToleranceProperty = DependencyProperty.Register(
             nameof(SimplifiedTolerance), typeof(float), typeof(AnnotationCanvasControl), new PropertyMetadata(0.5f));
 
+        public Color PenColor
+        {
+            get => (Color)GetValue(PenColorProperty);
+            set => SetValue(PenColorProperty, value);
+        }
+        public static readonly DependencyProperty PenColorProperty = DependencyProperty.Register(
+            nameof(PenColor), typeof(Color), typeof(AnnotationCanvasControl), new PropertyMetadata(Colors.Red));
+
+        public double PenThickness
+        {
+            get => (double)GetValue(PenThicknessProperty);
+            set => SetValue(PenThicknessProperty, value);
+        }
+        public static readonly DependencyProperty PenThicknessProperty = DependencyProperty.Register(
+            nameof(PenThickness), typeof(double), typeof(AnnotationCanvasControl), new PropertyMetadata(1.0));
+
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
@@ -99,12 +113,6 @@ namespace LiteView.Controls
             DynamicCanvas?.RemoveFromVisualTree();
             StaticCanvas?.RemoveFromVisualTree();
         }
-
-        /// <summary>Set the color for subsequent pen strokes.</summary>
-        public void SetPenColor(Color penColor) => _currentPenColor = penColor;
-
-        /// <summary>Set the thickness for subsequent pen strokes.</summary>
-        public void SetStrokeThickness(double strokeThickness) => _currentStrokeThickness = strokeThickness;
 
         /// <summary>Remove all strokes and clear the canvas.</summary>
         public void ClearStrokes()
@@ -172,13 +180,13 @@ namespace LiteView.Controls
             // ===== 笔分支 =====
             DynamicCanvas.CapturePointer(e.Pointer);
 
-            float thicknessScale = Math.Clamp((float)_currentStrokeThickness, 0.1f, 10f);
+            float thicknessScale = Math.Clamp((float)PenThickness, 0.1f, 10f);
             var startPos = new Vector2((float)cp.Position.X, (float)cp.Position.Y);
             var state = new StrokeState
             {
                 LastPos = startPos,
                 SmoothedDist = D_MIN,
-                Color = _currentPenColor,
+                Color = PenColor,
                 ThicknessScale = thicknessScale,
                 Points = { new InkPoint(startPos, W_MAX * 0.8f * thicknessScale) }
             };
@@ -294,7 +302,7 @@ namespace LiteView.Controls
         }
 
         /// <summary>橡皮擦视觉半径（DIP），与当前笔宽联动。</summary>
-        private float EraserRadius() => Math.Max(ERASER_BASE_RADIUS, (float)_currentStrokeThickness * 4f);
+        private float EraserRadius() => Math.Max(ERASER_BASE_RADIUS, (float)PenThickness * 4f);
 
         /// <summary>在 point 处擦除所有命中笔迹。命中判定基于相邻采样点之间的线段，而非仅采样点本身。</summary>
         private void EraseAt(Vector2 point)
@@ -561,7 +569,7 @@ namespace LiteView.Controls
             for (int i = n - 2; i >= 0; i--)
                 halfWidths[i] = halfWidths[i + 1] * WIDTH_EMA + halfWidths[i] * (1f - WIDTH_EMA);
 
-            const float MIN_HALF_WIDTH = 0.05f;
+            const float MIN_HALF_WIDTH = 0.15f;
             for (int i = 0; i < n; i++)
                 if (halfWidths[i] < MIN_HALF_WIDTH) halfWidths[i] = MIN_HALF_WIDTH;
 

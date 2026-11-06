@@ -53,7 +53,9 @@
             
             <control:AnnotationCanvasControl x:Name="AnnotationCanvas"
                                              IsHitTestVisible="False"
-                                             SimplifiedTolerance="{x:Bind SimplifiedTolerance, Mode=OneWay}"/>
+                                             PenColor="{x:Bind AnnotationPenColor, Mode=OneWay}"
+                                             PenThickness="{x:Bind AnnotationPenThickness, Mode=OneWay}"
+                                             SimplifiedTolerance="{x:Bind AnnotationSimplifiedTolerance, Mode=OneWay}"/>
         </Grid>
 
         

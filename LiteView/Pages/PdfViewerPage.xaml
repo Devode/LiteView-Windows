@@ -82,7 +82,9 @@
     <Grid x:Name="PdfGrid" SizeChanged="PdfGrid_SizeChanged">
 
         <control:PdfViewerControl x:Name="PdfViewer"
-                                  SimplifiedTolerance="{x:Bind ViewModel.StrokeSimplifiedTolerance, Mode=OneWay}"/>
+                                  AnnotationPenColor="{x:Bind ViewModel.PenColor, Mode=OneWay}"
+                                  AnnotationPenThickness="{x:Bind ViewModel.PenThickness, Mode=OneWay}"
+                                  AnnotationSimplifiedTolerance="{x:Bind ViewModel.StrokeSimplifiedTolerance, Mode=OneWay}"/>
         
         <Border x:Name="Clock"
                 HorizontalAlignment="Center" VerticalAlignment="Top"
@@ -266,9 +268,8 @@
                                 <Flyout>
                                     <StackPanel MinWidth="200" Spacing="12">
                                         <Slider x:Name="StrokeThicknessSlider" x:Uid="StrokeThickness" 
-                                                Minimum="0.1" Maximum="24" StepFrequency="0.1" 
-                                                ValueChanged="StrokeThicknessSlider_ValueChanged" 
-                                                Value="{x:Bind ViewModel.StrokeThickness, Mode=TwoWay}" />
+                                                Minimum="0.1" Maximum="24" StepFrequency="0.1"
+                                                Value="{x:Bind ViewModel.PenThickness, Mode=TwoWay}" />
 
                                         <StackPanel Orientation="Vertical" Spacing="12">
                                             <TextBlock x:Uid="PenColor"/>
@@ -276,7 +277,7 @@
                                                 <Border x:Name="CurrentColor" Width="32" Height="32" Background="{x:Bind ToBrush(ViewModel.PenColor), Mode=OneWay}" CornerRadius="4,0,0,4"/>
                                                 <SplitButton.Flyout>
                                                     <Flyout Placement="Bottom">
-                                                        <ColorPicker x:Name="PenColorPicker" Color="{x:Bind ViewModel.PenColor, Mode=TwoWay}" ColorChanged="PenColorPicker_ColorChanged" />
+                                                        <ColorPicker x:Name="PenColorPicker" Color="{x:Bind ViewModel.PenColor, Mode=TwoWay}"/>
                                                     </Flyout>
                                                 </SplitButton.Flyout>
                                             </SplitButton>
