@@ -14,7 +14,8 @@
                   HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                   HorizontalScrollMode="Enabled" VerticalScrollMode="Enabled"
                   IsHorizontalRailEnabled="False" IsVerticalRailEnabled="False" IsScrollInertiaEnabled="True"
-                  ViewChanged="PdfScrollViewer_ViewChanged">
+                  ViewChanged="PdfScrollViewer_ViewChanged"
+                  DirectManipulationStarted="PdfScrollViewer_DirectManipulationStarted">
         <Grid x:Name="ViewerRootGrid">
             <ItemsRepeater x:Name="PdfPagesRepeater"
                            Canvas.ZIndex="0">

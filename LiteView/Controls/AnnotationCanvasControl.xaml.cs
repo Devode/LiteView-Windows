@@ -29,12 +29,14 @@ namespace LiteView.Controls
     /// </summary>
     public sealed partial class AnnotationCanvasControl : UserControl, INotifyPropertyChanged
     {
-        private const float D_MIN = 1f;      // 慢写时的典型点间距
-        private const float D_MAX = 5f;     // 快写时的典型点间距
+        //private const float D_MIN = 2f;      // 慢写时的典型点间距
+        //private const float D_MAX = 5f;     // 快写时的典型点间距
+        private const float V_MIN = 200f;    // 慢写时的典型速度(DIP/s)
+        private const float V_MAX = 2000f;   // 快写时的典型速度(DIP/s)
         private const float W_MIN = 0.4f;    // 最细线宽
         private const float W_MAX = 2f;      // 最粗线宽
         private const float MIN_MOVE = 0.5f; // 小于此距离视为原地抖动，跳过
-        private const float PALM_CONTACT_THRESHOLD = 40f; // 手掌过滤阈值(px @96dpi)
+        private const float PALM_CONTACT_THRESHOLD = 70f; // 手掌过滤阈值(px @96dpi)
         private const float ERASER_BASE_RADIUS = 8f;   // DIP
         private const float MAX_DPI_SCALE = 10f;
 
@@ -148,6 +150,8 @@ namespace LiteView.Controls
 
         private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
         {
+            DynamicCanvas.CancelDirectManipulations();
+
             var cp = e.GetCurrentPoint(DynamicCanvas);
             uint id = e.Pointer.PointerId;
 
@@ -161,6 +165,7 @@ namespace LiteView.Controls
                 if (rect.Width > PALM_CONTACT_THRESHOLD || rect.Height > PALM_CONTACT_THRESHOLD) return;
             }
             if (deviceType == PointerDeviceType.Pen && cp.Properties.IsBarrelButtonPressed) return;
+
 
             // ===== 橡皮擦分支 =====
             if (IsEraser)
@@ -185,7 +190,9 @@ namespace LiteView.Controls
             var state = new StrokeState
             {
                 LastPos = startPos,
-                SmoothedDist = D_MIN,
+                LastTimestamp = cp.Timestamp,
+                SmoothedSpeed = (V_MIN + V_MAX) * 0.5f,  // 中性初值，避免起笔必然拉成 W_MAX
+                SampleCount = 0,
                 Color = PenColor,
                 ThicknessScale = thicknessScale,
                 Points = { new InkPoint(startPos, W_MAX * 0.8f * thicknessScale) }
@@ -218,22 +225,42 @@ namespace LiteView.Controls
             // ===== 笔分支 =====
             if (!_activeStrokes.TryGetValue(id, out var state)) return;
 
-            var cp = e.GetCurrentPoint(DynamicCanvas);
-            var pos = new Vector2((float)cp.Position.X, (float)cp.Position.Y);
+            var coalesced = e.GetIntermediatePoints(DynamicCanvas);
+            for (int k = 0; k < coalesced.Count; k++)
+            {
+                var cp = coalesced[k];
+                var pos = new Vector2((float)cp.Position.X, (float)cp.Position.Y);
 
-            float dx = pos.X - state.LastPos.X;
-            float dy = pos.Y - state.LastPos.Y;
-            float dist = MathF.Sqrt(dx * dx + dy * dy);
-            if (dist < MIN_MOVE) return;
+                float dx = pos.X - state.LastPos.X;
+                float dy = pos.Y - state.LastPos.Y;
+                float dist = MathF.Sqrt(dx * dx + dy * dy);
 
-            state.SmoothedDist = state.SmoothedDist * 0.75f + dist * 0.25f;
-            float t = MathF.Sqrt(Math.Clamp(
-                (state.SmoothedDist - D_MIN) / (D_MAX - D_MIN), 0f, 1f));
-            float baseWidth = W_MAX - (W_MAX - W_MIN) * t;
-            float width = baseWidth * state.ThicknessScale;
+                // 采样点太近时不提交，但也不更新 LastPos/LastTimestamp，
+                // 让位移与时间累积到下一个真实采样点，速度估计仍保持正确
+                if (dist < MIN_MOVE) continue;
 
-            state.Points.Add(new InkPoint(pos, width));
-            state.LastPos = pos;
+                // Timestamp 单位是微秒；先做差再缩放，避免 ulong → float 精度损失
+                double dtSec = ((double)cp.Timestamp - (double)state.LastTimestamp) * 1e-6;
+                float dt = MathF.Max(1e-4f, (float)dtSec); // 防御性下限（1e-4s = 0.1ms）
+                float speed = dist / dt;                    // DIP/s，采样频率无关
+
+                state.LastPos = pos;
+                state.LastTimestamp = cp.Timestamp;
+
+                // 速度 EMA 平滑（首样直接赋值，避免起笔从 0 缓慢爬升导致前段一律粗）
+                if (state.SampleCount == 0)
+                    state.SmoothedSpeed = speed;
+                else
+                    state.SmoothedSpeed = state.SmoothedSpeed * 0.85f + speed * 0.15f;
+                state.SampleCount++;
+
+                // 速度 → 宽度（慢→粗，快→细），映射曲线与原来一致，只换了输入量
+                float t = MathF.Sqrt(Math.Clamp(
+                    (state.SmoothedSpeed - V_MIN) / (V_MAX - V_MIN), 0f, 1f));
+                float width = (W_MAX - (W_MAX - W_MIN) * t) * state.ThicknessScale;
+
+                state.Points.Add(new InkPoint(pos, width));
+            }
 
             DynamicCanvas.Invalidate();
             e.Handled = true;
@@ -739,7 +766,9 @@ namespace LiteView.Controls
         {
             public List<InkPoint> Points = new();
             public Vector2 LastPos;
-            public float SmoothedDist;
+            public ulong LastTimestamp;     // PointerPoint.Timestamp（微秒）
+            public float SmoothedSpeed;     // 平滑后的速度（DIP/s）
+            public int SampleCount;         // 用于首样直接赋值
             public Color Color;
             public float ThicknessScale = 1f;
         }

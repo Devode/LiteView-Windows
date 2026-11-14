@@ -661,4 +661,12 @@ public sealed partial class PdfViewerControl : UserControl, INotifyPropertyChang
     }
 
     #endregion
+
+    private void PdfScrollViewer_DirectManipulationStarted(object sender, object e)
+    {
+        if (AnnotationCanvas.IsHitTestVisible)
+        {
+            PdfScrollViewer.CancelDirectManipulations();
+        }
+    }
 }

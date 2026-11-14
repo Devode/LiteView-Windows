@@ -26,6 +26,7 @@
                                      RegionsInvalidated="DynamicCanvas_RegionsInvalidated"
                                      CreateResources="DynamicCanvas_CreateResources"
                                      ClearColor="Transparent"
+                                     ManipulationMode="None"
                                      PointerPressed="OnPointerPressed"
                                      PointerMoved="OnPointerMoved"
                                      PointerReleased="OnPointerReleased"
