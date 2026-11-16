@@ -187,15 +187,22 @@ namespace LiteView.Controls
 
             float thicknessScale = Math.Clamp((float)PenThickness, 0.1f, 10f);
             var startPos = new Vector2((float)cp.Position.X, (float)cp.Position.Y);
+
+            // 中性速度对应的宽度，保证 1 点圆头和 >=2 点几何的起笔半圆尺寸一致
+            float neutralSpeed = (V_MIN + V_MAX) * 0.5f;
+            float tNeutral = MathF.Sqrt(Math.Clamp(
+                (neutralSpeed - V_MIN) / (V_MAX - V_MIN), 0f, 1f));
+            float initialWidth = (W_MAX - (W_MAX - W_MIN) * tNeutral) * thicknessScale;
+
             var state = new StrokeState
             {
                 LastPos = startPos,
                 LastTimestamp = cp.Timestamp,
-                SmoothedSpeed = (V_MIN + V_MAX) * 0.5f,  // 中性初值，避免起笔必然拉成 W_MAX
+                SmoothedSpeed = neutralSpeed,
                 SampleCount = 0,
                 Color = PenColor,
                 ThicknessScale = thicknessScale,
-                Points = { new InkPoint(startPos, W_MAX * 0.8f * thicknessScale) }
+                Points = { new InkPoint(startPos, initialWidth) }
             };
             _activeStrokes[id] = state;
 
@@ -226,6 +233,8 @@ namespace LiteView.Controls
             if (!_activeStrokes.TryGetValue(id, out var state)) return;
 
             var coalesced = e.GetIntermediatePoints(DynamicCanvas);
+            const int WINDOW_SIZE = 6;   // 最近 6 个提交点；间隔 2ms 时窗口约 10ms
+
             for (int k = 0; k < coalesced.Count; k++)
             {
                 var cp = coalesced[k];
@@ -234,31 +243,50 @@ namespace LiteView.Controls
                 float dx = pos.X - state.LastPos.X;
                 float dy = pos.Y - state.LastPos.Y;
                 float dist = MathF.Sqrt(dx * dx + dy * dy);
-
-                // 采样点太近时不提交，但也不更新 LastPos/LastTimestamp，
-                // 让位移与时间累积到下一个真实采样点，速度估计仍保持正确
                 if (dist < MIN_MOVE) continue;
 
-                // Timestamp 单位是微秒；先做差再缩放，避免 ulong → float 精度损失
+                // dt 合法性：必须为正，且不能低于时间戳可信分辨率
                 double dtSec = ((double)cp.Timestamp - (double)state.LastTimestamp) * 1e-6;
-                float dt = MathF.Max(1e-4f, (float)dtSec); // 防御性下限（1e-4s = 0.1ms）
-                float speed = dist / dt;                    // DIP/s，采样频率无关
+                if (dtSec <= 0) continue;       // 时间戳重复/回退：丢弃，让下一个真实点承接累计位移
+                if (dtSec < 1e-4) continue;     // <100μs 视为不可信
 
                 state.LastPos = pos;
                 state.LastTimestamp = cp.Timestamp;
 
-                // 速度 EMA 平滑（首样直接赋值，避免起笔从 0 缓慢爬升导致前段一律粗）
+                // ===== 滑动窗口平均速度 =====
+                state.Window.Enqueue(new SpeedSample(pos, cp.Timestamp));
+                while (state.Window.Count > WINDOW_SIZE) state.Window.Dequeue();
+
+                float speed;
+                if (state.Window.Count >= 2)
+                {
+                    var first = state.Window.Peek();
+                    double winDtSec = ((double)cp.Timestamp - (double)first.Ts) * 1e-6;
+                    if (winDtSec > 1e-3)        // 窗口至少 1ms 才有统计意义
+                        speed = Vector2.Distance(first.Pos, pos) / (float)winDtSec;
+                    else
+                        speed = dist / (float)dtSec;   // 窗口太短时退回瞬时值（罕见，且下面会 clamp）
+                }
+                else
+                {
+                    speed = dist / (float)dtSec;       // 首点
+                }
+
+                // 兜底 clamp，堵死任何残余异常值
+                speed = Math.Clamp(speed, V_MIN * 0.25f, V_MAX * 1.5f);
+
                 if (state.SampleCount == 0)
                     state.SmoothedSpeed = speed;
                 else
                     state.SmoothedSpeed = state.SmoothedSpeed * 0.85f + speed * 0.15f;
+
+                // EMA 长期漂移防线
+                state.SmoothedSpeed = Math.Clamp(state.SmoothedSpeed, V_MIN * 0.25f, V_MAX * 1.25f);
                 state.SampleCount++;
 
-                // 速度 → 宽度（慢→粗，快→细），映射曲线与原来一致，只换了输入量
                 float t = MathF.Sqrt(Math.Clamp(
                     (state.SmoothedSpeed - V_MIN) / (V_MAX - V_MIN), 0f, 1f));
                 float width = (W_MAX - (W_MAX - W_MIN) * t) * state.ThicknessScale;
-
                 state.Points.Add(new InkPoint(pos, width));
             }
 
@@ -408,7 +436,7 @@ namespace LiteView.Controls
                         continue;
                     }
 
-                    using var geo = BuildStrokeGeometry(sender, pts, taperEnd: true);
+                    using var geo = BuildStrokeGeometry(sender, pts, taperStart: true, taperEnd: true);
                     if (geo != null) ds.FillGeometry(geo, kv.Value.Color);
                 }
             }
@@ -455,7 +483,7 @@ namespace LiteView.Controls
 
                     // 在绘制时构建并缓存
                     if (stroke.CachedGeometry == null)
-                        stroke.CachedGeometry = BuildStrokeGeometry(sender, stroke.Points, taperEnd: true);
+                        stroke.CachedGeometry = BuildStrokeGeometry(sender, stroke.Points, taperStart: true, taperEnd: true);
 
                     // 直接使用已缓存的几何图形
                     if (stroke.CachedGeometry != null)
@@ -498,10 +526,10 @@ namespace LiteView.Controls
 
             // 中间段做 DP 简化
             var middleIndices = DouglasPeuckerIndices(points, taperZone, n - 1 - taperZone, tolerance);
-            for (int i = 0; i < middleIndices.Count - 1; i++)   // 跳过最后一个，taper 区会补
-                result.Add(points[middleIndices[i]]);
+            foreach (int idx in middleIndices)
+                result.Add(points[idx]);
 
-            // 终点 taper 区原样保留
+            // 终点 taper 区从 n - taperZone 开始，与 middleIndices 尾部 (= n-1-taperZone) 相邻不重叠
             for (int i = n - taperZone; i < n; i++)
                 result.Add(points[i]);
 
@@ -575,17 +603,40 @@ namespace LiteView.Controls
             int taperPts = n < 6 ? 0 : Math.Min(12, Math.Max(4, n / 4));
             if (taperPts > 0)
             {
-                for (int i = 0; i < n; i++)
+                // ===== 速度代理：平均点距 =====
+                // 同一设备的采样频率基本固定，avgSpacing ≈ 速度 / 采样率
+                float avgSpacing = 0f;
+                for (int i = 1; i < n; i++)
+                    avgSpacing += Vector2.Distance(points[i - 1].Position, points[i].Position);
+                avgSpacing /= (n - 1);
+
+                // 慢(avgSpacing < 0.6) → intensity=0，完全无 taper
+                // 快(avgSpacing > 1.5) → intensity=1，完整 taper
+                // 中间 SmoothStep 平滑过渡，避免视觉跳变
+                const float SPACING_SLOW = 0.6f;   // DIP/点，慢写阈值
+                const float SPACING_FAST = 1.5f;   // DIP/点，快写阈值
+                float taperIntensity = Math.Clamp(
+                    (avgSpacing - SPACING_SLOW) / (SPACING_FAST - SPACING_SLOW), 0f, 1f);
+                taperIntensity = SmoothStep(taperIntensity);
+
+                // 强度几乎为 0 时直接跳过，省掉多余乘加
+                if (taperIntensity > 0.02f)
                 {
-                    if (taperStart && i < taperPts)
+                    for (int i = 0; i < n; i++)
                     {
-                        float t = (float)i / (taperPts - 1);
-                        halfWidths[i] *= SmoothStep(t);
-                    }
-                    else if (taperEnd && i >= n - taperPts)
-                    {
-                        float t = (float)(i - (n - taperPts)) / (taperPts - 1);
-                        halfWidths[i] *= SmoothStep(1f - t);
+                        if (taperStart && i < taperPts)
+                        {
+                            float t = (float)i / (taperPts - 1);
+                            float taperFactor = SmoothStep(t);
+                            // 强度 0 → 因子保持 1（无 taper）；强度 1 → 因子 = taperFactor（原行为）
+                            halfWidths[i] *= 1f - taperIntensity * (1f - taperFactor);
+                        }
+                        else if (taperEnd && i >= n - taperPts)
+                        {
+                            float t = (float)(i - (n - taperPts)) / (taperPts - 1);
+                            float taperFactor = SmoothStep(1f - t);
+                            halfWidths[i] *= 1f - taperIntensity * (1f - taperFactor);
+                        }
                     }
                 }
             }
@@ -771,6 +822,14 @@ namespace LiteView.Controls
             public int SampleCount;         // 用于首样直接赋值
             public Color Color;
             public float ThicknessScale = 1f;
+
+            public readonly Queue<SpeedSample> Window = new();
+        }
+        private readonly struct SpeedSample
+        {
+            public readonly Vector2 Pos;
+            public readonly ulong Ts;
+            public SpeedSample(Vector2 pos, ulong ts) { Pos = pos; Ts = ts; }
         }
 
         private sealed class BakedStroke
