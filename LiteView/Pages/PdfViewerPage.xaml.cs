@@ -488,16 +488,6 @@ namespace LiteView.Pages
             }
         }
 
-        private void PenColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
-        {
-            PdfViewer.SetAnnotationColor(ViewModel.PenColor);
-        }
-
-        private void StrokeThicknessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
-        {
-            PdfViewer.SetAnnotationThickness(ViewModel.StrokeThickness);
-        }
-
 
         #region Jumping Page and ThubnailList
 
