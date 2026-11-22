@@ -392,7 +392,7 @@
                      Target="{x:Bind BtnEraser}" />
         <TeachingTip x:Name="ClearBtnTip"
                      Title="“清空”按钮"
-                     Subtitle="用于翻清除所有的“画笔”工具绘制的笔迹"
+                     Subtitle="用于清除所有的“画笔”工具绘制的笔迹"
                      IsOpen="False"
                      Target="{x:Bind BtnClear}" />
         
@@ -419,7 +419,7 @@
         
         <TeachingTip x:Name="PageBtnTip"
                      Title="“页码”按钮"
-                     Subtitle="用于显示当前页码，单击打开“跳转到指定页面”窗口"
+                     Subtitle="用于显示当前页码，单击打开缩略图"
                      IsOpen="False"
                      Target="{x:Bind PageBtn}" />
         
